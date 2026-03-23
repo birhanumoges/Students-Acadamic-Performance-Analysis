@@ -19,61 +19,86 @@ class_features = None
 target_encoders = {}
 df_clean = None
 
-def load_models(model_dir="models"):
-    """Load trained models from pickle files with better error handling"""
+def get_model_dir():
+    """Get the correct model directory path"""
+    # Get the directory where this file is located
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # Go up one level to the Streamlitapp directory, then to models
+    model_dir = os.path.join(os.path.dirname(current_dir), "models")
+    
+    # Also check if models directory exists in current directory
+    if not os.path.exists(model_dir):
+        model_dir = os.path.join(current_dir, "models")
+    
+    # If still not found, try the parent directory
+    if not os.path.exists(model_dir):
+        model_dir = os.path.join(os.path.dirname(current_dir), "models")
+    
+    print(f"Looking for models in: {model_dir}")
+    return model_dir
+
+def load_models(model_dir=None):
+    """Load trained models from pickle files with correct path handling"""
     global reg_model, class_model, reg_scaler, class_scaler, reg_features, class_features
+    
+    if model_dir is None:
+        model_dir = get_model_dir()
     
     try:
         # Load regression model
         reg_path = os.path.join(model_dir, "gradient_boosting_regression.pkl")
         if os.path.exists(reg_path):
+            print(f"✓ Loading regression model from: {reg_path}")
             reg_data = joblib.load(reg_path)
             reg_model = reg_data.get('model')
             reg_scaler = reg_data.get('scaler')
             reg_features = reg_data.get('feature_names')
-            print(f"✓ Regression model loaded successfully with {len(reg_features)} features")
+            print(f"✓ Regression model loaded successfully with {len(reg_features) if reg_features else 0} features")
         else:
-            print(f"⚠ Regression model not found at {reg_path}. Creating default model...")
-            # Create a default model if not found
-            from sklearn.ensemble import GradientBoostingRegressor
-            reg_model = GradientBoostingRegressor(n_estimators=100, random_state=42)
-            reg_scaler = StandardScaler()
-            # Create dummy features if needed
-            if reg_features is None:
-                reg_features = ['feature_' + str(i) for i in range(25)]
+            print(f"⚠ Regression model not found at {reg_path}")
+            reg_model = None
+            reg_scaler = None
+            reg_features = None
         
         # Load classification model
         class_path = os.path.join(model_dir, "classification_model.pkl")
         if os.path.exists(class_path):
+            print(f"✓ Loading classification model from: {class_path}")
             class_data = joblib.load(class_path)
             class_model = class_data.get('model')
             class_scaler = class_data.get('scaler')
             class_features = class_data.get('feature_names')
-            print(f"✓ Classification model loaded successfully with {len(class_features)} features")
+            print(f"✓ Classification model loaded successfully with {len(class_features) if class_features else 0} features")
         else:
-            print(f"⚠ Classification model not found at {class_path}. Creating default model...")
-            # Create a default model if not found
+            print(f"⚠ Classification model not found at {class_path}")
+            class_model = None
+            class_scaler = None
+            class_features = None
+        
+        # If models are None, create dummy models for testing
+        if reg_model is None:
+            print("Creating dummy regression model for testing...")
+            from sklearn.ensemble import GradientBoostingRegressor
+            reg_model = GradientBoostingRegressor(n_estimators=100, random_state=42)
+            reg_scaler = StandardScaler()
+            if reg_features is None:
+                reg_features = ['Overall_Avg_Attendance', 'Overall_Avg_Homework', 'Overall_Avg_Participation', 
+                               'School_Resources_Score', 'Overall_Textbook_Access_Composite']
+        
+        if class_model is None:
+            print("Creating dummy classification model for testing...")
             from sklearn.ensemble import GradientBoostingClassifier
             class_model = GradientBoostingClassifier(n_estimators=100, random_state=42)
             class_scaler = StandardScaler()
             if class_features is None:
-                class_features = ['feature_' + str(i) for i in range(25)]
+                class_features = reg_features.copy() if reg_features else ['Overall_Avg_Attendance', 'Overall_Avg_Homework']
             
     except Exception as e:
         print(f"Error loading models: {e}")
-        # Create fallback models
-        from sklearn.ensemble import GradientBoostingRegressor, GradientBoostingClassifier
-        from sklearn.preprocessing import StandardScaler
-        
-        reg_model = GradientBoostingRegressor(n_estimators=100, random_state=42)
-        reg_scaler = StandardScaler()
-        class_model = GradientBoostingClassifier(n_estimators=100, random_state=42)
-        class_scaler = StandardScaler()
-        
-        if reg_features is None:
-            reg_features = ['feature_' + str(i) for i in range(25)]
-        if class_features is None:
-            class_features = ['feature_' + str(i) for i in range(25)]
+        import traceback
+        traceback.print_exc()
+        reg_model = None
+        class_model = None
     
     return reg_model, class_model, reg_scaler, class_scaler, reg_features, class_features
 
@@ -142,13 +167,16 @@ def make_prediction_corrected(input_data, reg_model, class_model, reg_scaler, cl
             print("Processed DataFrame is empty")
             return None
         
+        print(f"Processed DataFrame shape: {processed_df.shape}")
+        print(f"Processed DataFrame columns: {processed_df.columns.tolist()}")
+        
         # REGRESSION PREDICTION
         if reg_model is not None and reg_scaler is not None:
             # Ensure we have all required features
             X_reg = processed_df.copy()
             
             # Make sure columns match exactly
-            if reg_features is not None:
+            if reg_features is not None and len(reg_features) > 0:
                 missing_cols = [col for col in reg_features if col not in X_reg.columns]
                 extra_cols = [col for col in X_reg.columns if col not in reg_features]
                 
@@ -182,7 +210,7 @@ def make_prediction_corrected(input_data, reg_model, class_model, reg_scaler, cl
             X_class = processed_df.copy()
             
             # Ensure we have classification features
-            if class_features is not None:
+            if class_features is not None and len(class_features) > 0:
                 missing_class_cols = [col for col in class_features if col not in X_class.columns]
                 if missing_class_cols:
                     print(f"Missing classification columns: {missing_class_cols}")
@@ -303,3 +331,6 @@ def make_prediction_corrected(input_data, reg_model, class_model, reg_scaler, cl
         import traceback
         traceback.print_exc()
         return None
+
+# Add missing import
+from sklearn.preprocessing import StandardScaler

@@ -10,6 +10,12 @@ import plotly.graph_objects as go
 import plotly.express as px
 import matplotlib.pyplot as plt
 import warnings
+import os
+import sys
+
+# Add the current directory to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 warnings.filterwarnings('ignore')
 
 # Set page config
@@ -63,7 +69,7 @@ from utils.predictions import (
 
 # Initialize session state
 if 'page' not in st.session_state:
-    st.session_state.page = "Overview"
+    st.session_state.page = "Overview Dashboard"
 if 'prediction_result' not in st.session_state:
     st.session_state.prediction_result = None
 if 'df_clean' not in st.session_state:
@@ -93,73 +99,83 @@ def load_data():
     """Load and preprocess data"""
     try:
         # Try to load from default path
-        df_original = pd.read_csv(r"C:/Users/DELL/Documents/project_data/ethiopian_students_dataset.csv")
-    except:
-        # If file not found, create sample data for demonstration
-        st.warning("Original dataset not found. Using sample data for demonstration.")
-        np.random.seed(42)
-        n_samples = 10000
-        df_original = pd.DataFrame({
-            'Student_ID': range(n_samples),
-            'Gender': np.random.choice(['Male', 'Female'], n_samples),
-            'Region': np.random.choice(['Addis Ababa', 'Oromia', 'Amhara', 'Tigray', 'SNNP'], n_samples),
-            'Field_Choice': np.random.choice(['Social', 'Natural'], n_samples),
-            'Health_Issue': np.random.choice(['No Issue', 'Vision Issues', 'Dental Problems'], n_samples),
-            'Father_Education': np.random.choice(['High School', 'College', 'Primary', 'University'], n_samples),
-            'Mother_Education': np.random.choice(['High School', 'College', 'Primary', 'University'], n_samples),
-            'Parental_Involvement': np.random.uniform(0, 1, n_samples),
-            'Home_Internet_Access': np.random.choice(['Yes', 'No'], n_samples),
-            'Electricity_Access': np.random.choice(['Yes', 'No'], n_samples),
-            'School_Type': np.random.choice(['Public', 'Private', 'NGO-operated'], n_samples),
-            'School_Location': np.random.choice(['Rural', 'Urban'], n_samples),
-            'Teacher_Student_Ratio': np.random.uniform(30, 60, n_samples),
-            'School_Resources_Score': np.random.uniform(0.3, 0.9, n_samples),
-            'School_Academic_Score': np.random.uniform(0.3, 0.9, n_samples),
-            'Student_to_Resources_Ratio': np.random.uniform(15, 30, n_samples),
-            'Career_Interest': np.random.choice(['Teacher', 'Doctor', 'Engineer', 'Farmer', 'Business'], n_samples),
-            'Date_of_Birth': pd.date_range('2000-01-01', periods=n_samples, freq='D')[:n_samples],
-        })
-        
-        # Add grade-level scores
-        for grade in ['Grade_1', 'Grade_2', 'Grade_3', 'Grade_4', 'Grade_5', 'Grade_6', 
-                      'Grade_7', 'Grade_8', 'Grade_9', 'Grade_10', 'Grade_11', 'Grade_12']:
-            df_original[f'{grade}_Test_Score'] = np.random.uniform(40, 100, n_samples)
-            df_original[f'{grade}_Attendance'] = np.random.uniform(70, 100, n_samples)
-            df_original[f'{grade}_Homework_Completion'] = np.random.uniform(50, 100, n_samples)
-            df_original[f'{grade}_Participation'] = np.random.uniform(50, 100, n_samples)
-            df_original[f'{grade}_Textbook_Access'] = np.random.choice(['Yes', 'No'], n_samples)
-        
-        # Add national exam scores
-        df_original['National_Exam_History'] = np.random.uniform(50, 100, n_samples)
-        df_original['National_Exam_Geography'] = np.random.uniform(50, 100, n_samples)
-        df_original['National_Exam_Economics'] = np.random.uniform(50, 100, n_samples)
-        df_original['National_Exam_Math_Social'] = np.random.uniform(50, 100, n_samples)
-        df_original['National_Exam_Biology'] = np.random.uniform(50, 100, n_samples)
-        df_original['National_Exam_Chemistry'] = np.random.uniform(50, 100, n_samples)
-        df_original['National_Exam_Physics'] = np.random.uniform(50, 100, n_samples)
-        df_original['National_Exam_Math_Natural'] = np.random.uniform(50, 100, n_samples)
-        df_original['National_Exam_Aptitude'] = np.random.uniform(50, 100, n_samples)
-        df_original['National_Exam_English'] = np.random.uniform(50, 100, n_samples)
-        df_original['National_Exam_Civics_and_Ethical_Education'] = np.random.uniform(50, 100, n_samples)
-        
-        # Add overall average
-        df_original['Overall_Average'] = np.random.uniform(40, 90, n_samples)
-        df_original['Total_National_Exam_Score'] = np.random.uniform(200, 400, n_samples)
+        file_path = r"C:/Users/DELL/Documents/project_data/ethiopian_students_dataset.csv"
+        if os.path.exists(file_path):
+            df_original = pd.read_csv(file_path)
+        else:
+            # If file not found, create sample data for demonstration
+            st.warning("Original dataset not found. Using sample data for demonstration.")
+            np.random.seed(42)
+            n_samples = 10000
+            df_original = pd.DataFrame({
+                'Student_ID': range(n_samples),
+                'Gender': np.random.choice(['Male', 'Female'], n_samples),
+                'Region': np.random.choice(['Addis Ababa', 'Oromia', 'Amhara', 'Tigray', 'SNNP'], n_samples),
+                'Field_Choice': np.random.choice(['Social', 'Natural'], n_samples),
+                'Health_Issue': np.random.choice(['No Issue', 'Vision Issues', 'Dental Problems'], n_samples),
+                'Father_Education': np.random.choice(['High School', 'College', 'Primary', 'University'], n_samples),
+                'Mother_Education': np.random.choice(['High School', 'College', 'Primary', 'University'], n_samples),
+                'Parental_Involvement': np.random.uniform(0, 1, n_samples),
+                'Home_Internet_Access': np.random.choice(['Yes', 'No'], n_samples),
+                'Electricity_Access': np.random.choice(['Yes', 'No'], n_samples),
+                'School_Type': np.random.choice(['Public', 'Private', 'NGO-operated'], n_samples),
+                'School_Location': np.random.choice(['Rural', 'Urban'], n_samples),
+                'Teacher_Student_Ratio': np.random.uniform(30, 60, n_samples),
+                'School_Resources_Score': np.random.uniform(0.3, 0.9, n_samples),
+                'School_Academic_Score': np.random.uniform(0.3, 0.9, n_samples),
+                'Student_to_Resources_Ratio': np.random.uniform(15, 30, n_samples),
+                'Career_Interest': np.random.choice(['Teacher', 'Doctor', 'Engineer', 'Farmer', 'Business'], n_samples),
+                'Date_of_Birth': pd.date_range('2000-01-01', periods=n_samples, freq='D')[:n_samples],
+            })
+            
+            # Add grade-level scores
+            for grade in ['Grade_1', 'Grade_2', 'Grade_3', 'Grade_4', 'Grade_5', 'Grade_6', 
+                          'Grade_7', 'Grade_8', 'Grade_9', 'Grade_10', 'Grade_11', 'Grade_12']:
+                df_original[f'{grade}_Test_Score'] = np.random.uniform(40, 100, n_samples)
+                df_original[f'{grade}_Attendance'] = np.random.uniform(70, 100, n_samples)
+                df_original[f'{grade}_Homework_Completion'] = np.random.uniform(50, 100, n_samples)
+                df_original[f'{grade}_Participation'] = np.random.uniform(50, 100, n_samples)
+                df_original[f'{grade}_Textbook_Access'] = np.random.choice(['Yes', 'No'], n_samples)
+            
+            # Add national exam scores
+            df_original['National_Exam_History'] = np.random.uniform(50, 100, n_samples)
+            df_original['National_Exam_Geography'] = np.random.uniform(50, 100, n_samples)
+            df_original['National_Exam_Economics'] = np.random.uniform(50, 100, n_samples)
+            df_original['National_Exam_Math_Social'] = np.random.uniform(50, 100, n_samples)
+            df_original['National_Exam_Biology'] = np.random.uniform(50, 100, n_samples)
+            df_original['National_Exam_Chemistry'] = np.random.uniform(50, 100, n_samples)
+            df_original['National_Exam_Physics'] = np.random.uniform(50, 100, n_samples)
+            df_original['National_Exam_Math_Natural'] = np.random.uniform(50, 100, n_samples)
+            df_original['National_Exam_Aptitude'] = np.random.uniform(50, 100, n_samples)
+            df_original['National_Exam_English'] = np.random.uniform(50, 100, n_samples)
+            df_original['National_Exam_Civics_and_Ethical_Education'] = np.random.uniform(50, 100, n_samples)
+            
+            # Add overall average
+            df_original['Overall_Average'] = np.random.uniform(40, 90, n_samples)
+            df_original['Total_National_Exam_Score'] = np.random.uniform(200, 400, n_samples)
+    
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return None, None, None
     
     # Preprocess data
-    df_raw = load_and_preprocess_data(df_original)
-    df_clean = encode_categorical_features(df_raw)
-    
-    # Prepare target encoders
-    prepare_target_encoders(df_original, df_clean)
-    
-    return df_original, df_raw, df_clean
+    try:
+        df_raw = load_and_preprocess_data(df_original)
+        df_clean = encode_categorical_features(df_raw)
+        
+        # Prepare target encoders
+        prepare_target_encoders(df_original, df_clean)
+        
+        return df_original, df_raw, df_clean
+    except Exception as e:
+        st.error(f"Error preprocessing data: {e}")
+        return None, None, None
 
 
 @st.cache_resource
 def load_models_and_results():
     """Load trained models and pre-computed results"""
-    # Load models
+    # Load models with correct path
     reg_model, class_model, reg_scaler, class_scaler, reg_features, class_features = load_models()
     
     # Create regression results structure (based on provided training output)
@@ -279,7 +295,8 @@ def load_models_and_results():
     shap_data_precomputed = None
     
     return (regression_models, feature_importances, classification_model, 
-            clustering_analysis, shap_data_precomputed, reg_features, class_features)
+            clustering_analysis, shap_data_precomputed, reg_features, class_features, 
+            reg_model, class_model, reg_scaler, class_scaler)
 
 
 def main():
@@ -291,9 +308,14 @@ def main():
     # Load data
     df_original, df_raw, df_clean = load_data()
     
+    if df_clean is None:
+        st.error("Failed to load data. Please check the data file path.")
+        return
+    
     # Load models and results
     (regression_models, feature_importances, classification_model, 
-     clustering_analysis, shap_data_precomputed, reg_features, class_features) = load_models_and_results()
+     clustering_analysis, shap_data_precomputed, reg_features, class_features,
+     reg_model, class_model, reg_scaler, class_scaler) = load_models_and_results()
     
     # Load target encoders
     target_encoders = st.session_state.target_encoders
@@ -307,6 +329,12 @@ def main():
     # Store in session state for prediction
     st.session_state.df_clean = df_clean
     st.session_state.reg_features = reg_features
+    st.session_state.reg_model = reg_model
+    st.session_state.class_model = class_model
+    st.session_state.reg_scaler = reg_scaler
+    st.session_state.class_scaler = class_scaler
+    st.session_state.class_features = class_features
+    st.session_state.target_encoders = target_encoders
     
     # Sidebar navigation
     st.sidebar.title("📊 Student Analytics")
@@ -319,7 +347,7 @@ def main():
         if st.sidebar.button(
             page,
             key=f"btn_{page}",
-            use_container_width=True,
+            use_container_width=True,  # This will be deprecated but keep for now
             type="primary" if st.session_state.page == page else "secondary"
         ):
             st.session_state.page = page
@@ -343,7 +371,8 @@ def main():
         show_models_page(regression_models, feature_importances, classification_model, shap_data_precomputed)
     
     elif st.session_state.page == "Make Prediction":
-        show_prediction_page(df_clean, target_encoders, reg_features, reg_features, classification_model)
+        show_prediction_page(df_clean, target_encoders, reg_features, class_features, 
+                           classification_model, reg_model, class_model, reg_scaler, class_scaler)
     
     elif st.session_state.page == "Student Clustering":
         show_clustering_page(clustering_analysis)
@@ -364,7 +393,7 @@ def show_overview_page(df_original, df_raw, df_clean):
     with col1:
         st.metric("Total Students", f"{len(df_clean):,}")
     with col2:
-        st.metric("All Columns", f"{df_original.shape[1]}")
+        st.metric("All Columns", f"{df_original.shape[1] if df_original is not None else 'N/A'}")
     with col3:
         if 'Overall_Average' in df_clean.columns:
             avg_score = df_clean['Overall_Average'].mean()
@@ -430,7 +459,7 @@ def show_overview_page(df_original, df_raw, df_clean):
     with st.expander("📚 Dataset Summary"):
         st.markdown(f"""
         **Preprocessing Steps:**
-        - Loaded {df_raw.shape[0]:,} student records with {df_original.shape[1]} original features
+        - Loaded {df_raw.shape[0]:,} student records with {df_original.shape[1] if df_original is not None else 'N/A'} original features
         - Aggregated grade-level scores into education stages
         - Created engagement and textbook access composites
         - Encoded categorical variables
@@ -600,7 +629,8 @@ def show_models_page(regression_models, feature_importances, classification_mode
         """)
 
 
-def show_prediction_page(df_clean, target_encoders, reg_features, class_features, classification_model):
+def show_prediction_page(df_clean, target_encoders, reg_features, class_features, 
+                        classification_model, reg_model, class_model, reg_scaler, class_scaler):
     """Display prediction page with input form"""
     st.title("🎯 Make Student Performance Prediction")
     st.markdown("Enter student details to predict academic performance and risk level")
@@ -655,7 +685,7 @@ def show_prediction_page(df_clean, target_encoders, reg_features, class_features
             homework = st.number_input("Overall Avg Homework (0-100)", min_value=0, max_value=100, value=65)
             participation = st.number_input("Overall Avg Participation (0-100)", min_value=0, max_value=100, value=70)
         
-        submitted = st.form_submit_button("Make Prediction", type="primary", use_container_width=True)
+        submitted = st.form_submit_button("Make Prediction", use_container_width=True)
     
     # Make prediction when form is submitted
     if submitted:
@@ -683,10 +713,6 @@ def show_prediction_page(df_clean, target_encoders, reg_features, class_features
                 'Overall_Avg_Homework': homework,
                 'Overall_Avg_Participation': participation
             }
-            
-            # Load models for prediction
-            from utils.predictions import load_models, make_prediction_corrected
-            reg_model, class_model, reg_scaler, class_scaler, _, _ = load_models()
             
             prediction = make_prediction_corrected(
                 input_data, reg_model, class_model, reg_scaler, class_scaler,
