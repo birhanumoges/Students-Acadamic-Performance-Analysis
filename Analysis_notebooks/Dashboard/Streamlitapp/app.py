@@ -93,7 +93,7 @@ def load_data():
     """Load and preprocess data"""
     try:
         # Try to load from default path
-        df_original = pd.read_csv(r"C:/Users/DELL/projects/project1/Students-Acadamic-Performance-Analysis/ethiopian_students_dataset.csv")
+        df_original = pd.read_csv(r"C:/Users/DELL/Documents/project_data/ethiopian_students_dataset.csv")
     except:
         # If file not found, create sample data for demonstration
         st.warning("Original dataset not found. Using sample data for demonstration.")
