@@ -1,5 +1,5 @@
 {
-    "model_name": "XGBoost",
+    "model_name": "GradientBoosting",
     "features": [
         "Gender",
         "Parental_Involvement",
@@ -40,8 +40,6 @@
         "Field_Choice",
         "Father_Education_Encoded",
         "Mother_Education_Encoded",
-        "Health_Issue_Flag",
-        "Health_Issue_Severity",
         "Health_Issue_Target",
         "Region_Encoded",
         "School_Type_Freq",
@@ -54,7 +52,10 @@
         "Overall_Avg_Participation",
         "Overall_Engagement_Score"
     ],
-    "categorical_features": [],
+    "categorical_features": [
+        "Health_Issue_Flag",
+        "Health_Issue_Severity"
+    ],
     "target": "your_target_column",
     "version": "v1"
 }
