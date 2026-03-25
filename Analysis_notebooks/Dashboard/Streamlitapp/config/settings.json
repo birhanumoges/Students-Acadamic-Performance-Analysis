@@ -1,0 +1,67 @@
+{
+    "risk_threshold": 0.5,
+    "model_performance": {
+        "regression": {
+            "best_model": "XGBoost",
+            "r2": 0.7855,
+            "mae": 2.98,
+            "rmse": 3.72,
+            "cv_mean": 0.7837,
+            "cv_std": 0.0021
+        },
+        "classification": {
+            "best_model": "Gradient Boosting",
+            "f1": 0.7782,
+            "roc_auc": 0.9178,
+            "accuracy": 0.856
+        }
+    },
+    "feature_importance": {
+        "regression": {
+            "School_Resources_Score": 0.603988,
+            "Overall_Engagement_Score": 0.119446,
+            "School_Academic_Score": 0.072515,
+            "Overall_Textbook_Access_Composite": 0.071425,
+            "Overall_Avg_Attendance": 0.028697,
+            "Teacher_Student_Ratio": 0.020232,
+            "Overall_Avg_Homework": 0.017186,
+            "School_Location": 0.009185,
+            "Health_Issue_Flag": 0.008734,
+            "Overall_Avg_Participation": 0.008454
+        },
+        "classification": {
+            "School_Resources_Score": 0.5505,
+            "Overall_Engagement_Score": 0.1789,
+            "Overall_Avg_Attendance": 0.0690,
+            "Overall_Avg_Homework": 0.0443,
+            "Age": 0.0296,
+            "Health_Issue_Target": 0.0264,
+            "Overall_Avg_Participation": 0.0193,
+            "School_Type_Target": 0.0137,
+            "Health_Issue_Flag": 0.0135,
+            "Parental_Involvement": 0.0110
+        }
+    },
+    "national_exam_performance": {
+        "Gradient Boosting": {"r2": 0.437997, "mae": 0.081404, "rmse": 0.107109},
+        "XGBoost": {"r2": 0.435344, "mae": 0.081569, "rmse": 0.107362},
+        "Random Forest": {"r2": 0.425839, "mae": 0.082253, "rmse": 0.108262}
+    },
+    "clustering": {
+        "silhouette_score": 0.1742,
+        "cluster_sizes": {"Low": 39380, "Medium": 38933, "High": 21687},
+        "regional_risk": {
+            "Somali": 47.4, "Benishangul-Gumuz": 45.54, "Afar": 45.27,
+            "Tigray": 44.76, "Sidama": 43.24, "Gambela": 42.24,
+            "SNNP": 40.57, "Oromia": 39.21, "Amhara": 39.18,
+            "South West Ethiopia": 39.18, "Dire Dawa": 31.37,
+            "Harari": 28.72, "Addis Ababa": 21.32
+        }
+    },
+    "required_features": [
+        "School_Resources_Score", "Overall_Engagement_Score", "School_Academic_Score",
+        "Overall_Textbook_Access_Composite", "Overall_Avg_Attendance", "Teacher_Student_Ratio",
+        "Overall_Avg_Homework", "Overall_Avg_Participation", "Parental_Involvement",
+        "Gender", "Region", "Health_Issue", "Age", "School_Location"
+    ]
+}
