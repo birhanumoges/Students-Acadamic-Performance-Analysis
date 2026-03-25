@@ -1,6 +1,7 @@
 """
 Ethiopian Student Performance Analytics Dashboard
 Streamlit Version - Complete Replication of Dash App
+using the same data preprocessing, model loading, and visualization functions as the original Dash app, but adapted for Streamlit's interface and caching mechanisms. The app includes an overview dashboard, detailed model analysis with SHAP explanations, a prediction interface for individual students, and a clustering analysis of student performance. All visualizations are created using Plotly for interactivity, and the app is structured to provide a seamless user experience while maintaining the integrity of the original analysis.
 """
 
 import streamlit as st
