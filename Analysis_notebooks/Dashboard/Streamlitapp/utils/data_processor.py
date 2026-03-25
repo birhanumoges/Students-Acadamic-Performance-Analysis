@@ -1,7 +1,7 @@
 # utils/data_processor.py
 import pandas as pd
 import numpy as np
-import joblib
+import json
 import os
 from datetime import datetime
 import warnings
@@ -10,10 +10,18 @@ warnings.filterwarnings('ignore')
 class DataProcessor:
     """Data preprocessing and encoding class"""
     
-    def __init__(self):
+    def __init__(self, config_path=None):
         self.target_encoders = {}
         self.feature_names = None
+        self.config = self._load_config(config_path)
         
+    def _load_config(self, config_path):
+        """Load configuration from JSON file"""
+        if config_path and os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        return {}
+    
     def load_and_preprocess_data(self, df_original):
         """Load and preprocess the Ethiopian student dataset"""
         df = df_original.copy()
@@ -90,12 +98,13 @@ class DataProcessor:
         df = pd.concat([df, new_cols_df], axis=1)
         df = df.loc[:, ~df.columns.duplicated()]
         
-        # National exams
+        # National exams - track-based averages
         social_subjects = ['National_Exam_History', 'National_Exam_Geography',
                            'National_Exam_Economics', 'National_Exam_Math_Social']
         natural_subjects = ['National_Exam_Biology', 'National_Exam_Chemistry',
                             'National_Exam_Physics', 'National_Exam_Math_Natural']
         
+        # Convert to numeric
         for col in social_subjects + natural_subjects:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -177,6 +186,8 @@ class DataProcessor:
             }
             
             df_encoded['Health_Issue_Severity'] = df_encoded['Health_Issue'].map(severity_map).fillna(1).astype(int)
+            df_encoded['Health_Issue_Target'] = np.where(df_encoded['Health_Issue'] == 'No Issue', 0, 
+                                                          np.where(df_encoded['Health_Issue_Severity'] <= 2, 0.5, 1))
             df_encoded.drop(columns=['Health_Issue'], inplace=True)
         
         # Region encoding
@@ -189,6 +200,7 @@ class DataProcessor:
         if 'School_Type' in df_encoded.columns:
             school_freq = df_encoded['School_Type'].value_counts(normalize=True).to_dict()
             df_encoded['School_Type_Freq'] = df_encoded['School_Type'].map(school_freq)
+            df_encoded['School_Type_Target'] = np.where(df_encoded['School_Type'] == 'Private', 1, 0)
             df_encoded.drop(columns=['School_Type'], inplace=True)
         
         # Career Interest encoding
@@ -205,3 +217,14 @@ class DataProcessor:
             df_encoded.drop(columns=['Date_of_Birth'], inplace=True)
         
         return df_encoded
+    
+    def prepare_features_for_prediction(self, input_data):
+        """Prepare input data for prediction"""
+        # Create dataframe from input
+        df = pd.DataFrame([input_data])
+        
+        # Process through the same pipeline
+        df = self.load_and_preprocess_data(df)
+        df = self.encode_categorical_features(df)
+        
+        return df
