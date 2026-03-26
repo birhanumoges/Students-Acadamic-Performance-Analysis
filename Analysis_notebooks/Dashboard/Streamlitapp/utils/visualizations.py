@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 class Visualizer:
-    """Visualization class for all plots"""
+    """Visualization class for all plots - matches Dash app exactly"""
     
     COLOR_SCHEME = {
         'primary': '#2E86AB',
@@ -14,12 +14,14 @@ class Visualizer:
         'warning': '#F18F01',
         'danger': '#C73E1D',
         'light': '#F0F3F5',
-        'dark': '#2C3E50'
+        'dark': '#2C3E50',
+        'background': '#FFFFFF',
+        'text': '#2C3E50'
     }
     
     @staticmethod
     def create_score_histogram(df, column='Overall_Average'):
-        """Create score distribution histogram"""
+        """Create distribution plot for overall average scores"""
         if column not in df.columns:
             return go.Figure()
         
@@ -32,19 +34,19 @@ class Visualizer:
             name='Score Distribution'
         ))
         
-        # Add vertical lines
         mean_score = df[column].mean()
         fig.add_vline(x=mean_score, line_dash="dash", line_color=Visualizer.COLOR_SCHEME['danger'],
                       annotation_text=f"Mean: {mean_score:.1f}")
         fig.add_vline(x=50, line_dash="dash", line_color=Visualizer.COLOR_SCHEME['warning'],
-                      annotation_text="Pass Threshold")
+                      annotation_text="Risk Threshold")
         
         fig.update_layout(
             title="Distribution of Overall Average Scores",
-            xaxis_title="Score",
+            xaxis_title="Overall Average Score",
             yaxis_title="Number of Students",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=450,
             showlegend=True
         )
@@ -73,6 +75,8 @@ class Visualizer:
             title="Student Risk Distribution",
             xaxis_title="Risk Category",
             yaxis_title="Number of Students",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=400,
             barmode='group',
             showlegend=True
@@ -101,6 +105,8 @@ class Visualizer:
             title="Average Score by Region",
             xaxis_title="Average Score",
             yaxis_title="Region",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=500,
             margin=dict(l=120)
         )
@@ -129,17 +135,17 @@ class Visualizer:
             title="Average Score by Gender",
             xaxis_title="Gender",
             yaxis_title="Average Score",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=400
         )
         return fig
     
     @staticmethod
     def create_correlation_heatmap(df):
-        """Create correlation heatmap"""
+        """Create correlation heatmap for top features"""
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        
-        # Remove target leakage columns
-        exclude_cols = ['Risk_NotRisk', 'Health_Issue_Target', 'School_Type_Target']
+        exclude_cols = ['Risk_NotRisk']
         numeric_cols = [c for c in numeric_cols if c not in exclude_cols]
         
         if len(numeric_cols) > 20:
@@ -164,45 +170,34 @@ class Visualizer:
             hoverongaps=False
         ))
         fig.update_layout(
-            title="Feature Correlation Heatmap",
+            title="Feature Correlation Heatmap (Top 15 Features)",
             xaxis_title="Features",
             yaxis_title="Features",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=600,
             xaxis_tickangle=-45
         )
         return fig
     
     @staticmethod
-    def create_scatter_plot(df, x_col, y_col):
-        """Create scatter plot for two variables"""
-        if x_col not in df.columns or y_col not in df.columns:
-            return go.Figure()
+    def create_regression_comparison_plot(regression_metrics):
+        """Create comparison plot for regression models"""
+        models = list(regression_metrics.keys())
+        r2_scores = [regression_metrics[m]['r2'] for m in models]
         
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=df[x_col],
-            y=df[y_col],
-            mode='markers',
-            marker=dict(color=Visualizer.COLOR_SCHEME['primary'], size=6, opacity=0.6),
-            name=f'{y_col} vs {x_col}'
-        ))
-        
-        # Add trend line
-        z = np.polyfit(df[x_col], df[y_col], 1)
-        p = np.poly1d(z)
-        x_trend = np.linspace(df[x_col].min(), df[x_col].max(), 100)
-        fig.add_trace(go.Scatter(
-            x=x_trend,
-            y=p(x_trend),
-            mode='lines',
-            name='Trend Line',
-            line=dict(color=Visualizer.COLOR_SCHEME['secondary'], dash='dash')
-        ))
-        
+        fig = go.Figure(data=[
+            go.Bar(x=models, y=r2_scores,
+                   marker_color=Visualizer.COLOR_SCHEME['primary'],
+                   text=[f'{score:.3f}' for score in r2_scores],
+                   textposition='auto')
+        ])
         fig.update_layout(
-            title=f"{y_col} vs {x_col}",
-            xaxis_title=x_col,
-            yaxis_title=y_col,
+            title="Regression Model R² Score Comparison",
+            xaxis_title="Models",
+            yaxis_title="R² Score",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=400
         )
         return fig
@@ -225,8 +220,63 @@ class Visualizer:
             title=title,
             xaxis_title="Importance Score",
             yaxis_title="Features",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=450,
             margin=dict(l=150)
+        )
+        return fig
+    
+    @staticmethod
+    def create_national_exam_model_comparison_plot(national_exam_performance):
+        """Create bar plot for National Exam Score model comparison"""
+        df = pd.DataFrame(national_exam_performance).T.reset_index()
+        df.columns = ['Model', 'R2_Score', 'MAE', 'RMSE']
+        sorted_df = df.sort_values('R2_Score', ascending=True)
+        
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            y=sorted_df['Model'],
+            x=sorted_df['R2_Score'],
+            orientation='h',
+            marker_color=[Visualizer.COLOR_SCHEME['success'] if 'Gradient' in m else Visualizer.COLOR_SCHEME['primary'] 
+                          for m in sorted_df['Model']],
+            text=[f'{score:.4f}' for score in sorted_df['R2_Score']],
+            textposition='auto',
+            name='R² Score'
+        ))
+        fig.update_layout(
+            title="National Exam Score Model Performance (R² Score)",
+            xaxis_title="R² Score",
+            yaxis_title="Model",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            height=400,
+            xaxis=dict(range=[0, 0.5])
+        )
+        return fig
+    
+    @staticmethod
+    def create_national_exam_feature_importance_plot(national_exam_feature_importance):
+        """Create feature importance plot for National Exam Score model"""
+        df = pd.DataFrame(national_exam_feature_importance)
+        sorted_df = df.sort_values('Importance', ascending=True).tail(10)
+        
+        fig = go.Figure(go.Bar(
+            x=sorted_df['Importance'],
+            y=sorted_df['Feature'],
+            orientation='h',
+            marker_color=Visualizer.COLOR_SCHEME['secondary'],
+            text=[f'{imp:.1%}' for imp in sorted_df['Importance']],
+            textposition='auto'
+        ))
+        fig.update_layout(
+            title="Feature Importance - National Exam Score (Gradient Boosting)",
+            xaxis_title="Importance Score",
+            yaxis_title="Features",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            height=500
         )
         return fig
     
@@ -246,6 +296,8 @@ class Visualizer:
             title="Confusion Matrix - Risk Classification",
             xaxis_title="Predicted",
             yaxis_title="Actual",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=400
         )
         return fig
@@ -272,6 +324,8 @@ class Visualizer:
             title="ROC Curve - Risk Classification",
             xaxis_title="False Positive Rate",
             yaxis_title="True Positive Rate",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=450,
             xaxis=dict(range=[0, 1]),
             yaxis=dict(range=[0, 1.05])
@@ -296,6 +350,8 @@ class Visualizer:
             title="Student Performance Cluster Distribution",
             xaxis_title="Performance Level",
             yaxis_title="Number of Students",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=400
         )
         return fig
@@ -320,6 +376,8 @@ class Visualizer:
             title="Regional Risk Analysis (% Low Performance Students)",
             xaxis_title="% Low Performance",
             yaxis_title="Region",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=550,
             margin=dict(l=150)
         )
@@ -345,31 +403,37 @@ class Visualizer:
             title="Regional Cluster Distribution Heatmap",
             xaxis_title="Performance Cluster",
             yaxis_title="Region",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=550,
             xaxis=dict(tickangle=0)
         )
         return fig
     
     @staticmethod
-    def create_boxplot(df, x_col, y_col):
-        """Create boxplot by category"""
-        if x_col not in df.columns or y_col not in df.columns:
-            return go.Figure()
-        
+    def create_actual_vs_predicted_plot(y_test, y_pred, model_name):
+        """Create actual vs predicted plot for best regression model"""
         fig = go.Figure()
-        
-        categories = df[x_col].unique()
-        for cat in categories:
-            fig.add_trace(go.Box(
-                y=df[df[x_col] == cat][y_col],
-                name=str(cat),
-                marker_color=Visualizer.COLOR_SCHEME['primary']
-            ))
-        
+        fig.add_trace(go.Scatter(
+            x=y_test,
+            y=y_pred,
+            mode='markers',
+            name='Predictions',
+            marker=dict(color=Visualizer.COLOR_SCHEME['primary'], size=6, opacity=0.6)
+        ))
+        fig.add_trace(go.Scatter(
+            x=[y_test.min(), y_test.max()],
+            y=[y_test.min(), y_test.max()],
+            mode='lines',
+            name='Perfect Prediction',
+            line=dict(dash='dash', color=Visualizer.COLOR_SCHEME['secondary'], width=2)
+        ))
         fig.update_layout(
-            title=f"{y_col} Distribution by {x_col}",
-            xaxis_title=x_col,
-            yaxis_title=y_col,
+            title=f"Actual vs Predicted Overall Average - {model_name}",
+            xaxis_title="Actual Overall Average",
+            yaxis_title="Predicted Overall Average",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=400
         )
         return fig
