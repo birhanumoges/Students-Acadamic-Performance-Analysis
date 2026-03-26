@@ -104,7 +104,7 @@ MODEL_PATHS = {
 }
 
 CONFIG_PATH = 'config/settings.json'
-DATA_PATH = 'data/ethiopian_students_dataset.csv'
+DATA_PATH = "C:/Users/DELL/Documents/project_data/ethiopian_students_dataset.csv"
 
 # Load configuration
 def load_config():
