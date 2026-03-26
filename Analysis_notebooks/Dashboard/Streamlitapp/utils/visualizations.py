@@ -23,7 +23,9 @@ class Visualizer:
     def create_score_histogram(df, column='Overall_Average'):
         """Create distribution plot for overall average scores"""
         if column not in df.columns:
-            return go.Figure()
+            fig = go.Figure()
+            fig.update_layout(title="No data available for " + column)
+            return fig
         
         fig = go.Figure()
         fig.add_trace(go.Histogram(
@@ -39,7 +41,6 @@ class Visualizer:
                       annotation_text=f"Mean: {mean_score:.1f}")
         fig.add_vline(x=50, line_dash="dash", line_color=Visualizer.COLOR_SCHEME['warning'],
                       annotation_text="Risk Threshold")
-        
         fig.update_layout(
             title="Distribution of Overall Average Scores",
             xaxis_title="Overall Average Score",
@@ -56,20 +57,32 @@ class Visualizer:
     def create_risk_bar(df):
         """Create risk distribution bar chart"""
         if 'Overall_Average' not in df.columns:
-            return go.Figure()
+            fig = go.Figure()
+            fig.update_layout(title="No data available")
+            return fig
         
         risk_count = (df['Overall_Average'] < 50).sum()
         not_risk_count = len(df) - risk_count
         
         fig = go.Figure(data=[
-            go.Bar(name='At Risk', x=['Risk Status'], y=[risk_count],
-                   marker_color=Visualizer.COLOR_SCHEME['danger'],
-                   text=[f"{risk_count} ({risk_count/len(df)*100:.1f}%)"], 
-                   textposition='auto'),
-            go.Bar(name='Not at Risk', x=['Risk Status'], y=[not_risk_count],
-                   marker_color=Visualizer.COLOR_SCHEME['success'],
-                   text=[f"{not_risk_count} ({not_risk_count/len(df)*100:.1f}%)"], 
-                   textposition='auto')
+            go.Bar(
+                name='At Risk', 
+                x=['Risk Status'], 
+                y=[risk_count],
+                marker_color=Visualizer.COLOR_SCHEME['danger'],
+                text=[f"{risk_count} ({risk_count/len(df)*100:.1f}%)"], 
+                textposition='auto',
+                textfont=dict(size=14)
+            ),
+            go.Bar(
+                name='Not at Risk', 
+                x=['Risk Status'], 
+                y=[not_risk_count],
+                marker_color=Visualizer.COLOR_SCHEME['success'],
+                text=[f"{not_risk_count} ({not_risk_count/len(df)*100:.1f}%)"], 
+                textposition='auto',
+                textfont=dict(size=14)
+            )
         ])
         fig.update_layout(
             title="Student Risk Distribution",
@@ -77,9 +90,17 @@ class Visualizer:
             yaxis_title="Number of Students",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=400,
             barmode='group',
-            showlegend=True
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            )
         )
         return fig
     
@@ -87,7 +108,9 @@ class Visualizer:
     def create_region_bar(df):
         """Create average score by region bar chart"""
         if 'Region' not in df.columns or 'Overall_Average' not in df.columns:
-            return go.Figure()
+            fig = go.Figure()
+            fig.update_layout(title="Region or Score data not available")
+            return fig
         
         region_avg = df.groupby('Region')['Overall_Average'].mean().sort_values()
         
@@ -98,7 +121,8 @@ class Visualizer:
                 orientation='h',
                 marker_color=Visualizer.COLOR_SCHEME['primary'],
                 text=[f'{v:.1f}' for v in region_avg.values],
-                textposition='auto'
+                textposition='auto',
+                textfont=dict(size=11)
             )
         ])
         fig.update_layout(
@@ -107,6 +131,7 @@ class Visualizer:
             yaxis_title="Region",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=500,
             margin=dict(l=120)
         )
@@ -116,7 +141,9 @@ class Visualizer:
     def create_gender_bar(df):
         """Create average score by gender bar chart"""
         if 'Gender' not in df.columns or 'Overall_Average' not in df.columns:
-            return go.Figure()
+            fig = go.Figure()
+            fig.update_layout(title="Gender or Score data not available")
+            return fig
         
         gender_avg = df.groupby('Gender')['Overall_Average'].mean()
         gender_map = {0: 'Male', 1: 'Female'}
@@ -128,7 +155,8 @@ class Visualizer:
                 y=gender_avg.values,
                 marker_color=Visualizer.COLOR_SCHEME['primary'],
                 text=[f'{v:.1f}' for v in gender_avg.values],
-                textposition='auto'
+                textposition='auto',
+                textfont=dict(size=14)
             )
         ])
         fig.update_layout(
@@ -137,6 +165,7 @@ class Visualizer:
             yaxis_title="Average Score",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=400
         )
         return fig
@@ -175,7 +204,9 @@ class Visualizer:
             yaxis_title="Features",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=600,
+            width=800,
             xaxis_tickangle=-45
         )
         return fig
@@ -187,10 +218,14 @@ class Visualizer:
         r2_scores = [regression_metrics[m]['r2'] for m in models]
         
         fig = go.Figure(data=[
-            go.Bar(x=models, y=r2_scores,
-                   marker_color=Visualizer.COLOR_SCHEME['primary'],
-                   text=[f'{score:.3f}' for score in r2_scores],
-                   textposition='auto')
+            go.Bar(
+                x=models, 
+                y=r2_scores,
+                marker_color=Visualizer.COLOR_SCHEME['primary'],
+                text=[f'{score:.3f}' for score in r2_scores],
+                textposition='auto',
+                textfont=dict(size=12)
+            )
         ])
         fig.update_layout(
             title="Regression Model R² Score Comparison",
@@ -198,7 +233,9 @@ class Visualizer:
             yaxis_title="R² Score",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
-            height=400
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
+            height=400,
+            yaxis=dict(range=[0.75, 0.8])
         )
         return fig
     
@@ -214,7 +251,8 @@ class Visualizer:
             orientation='h',
             marker_color=Visualizer.COLOR_SCHEME['primary'],
             text=[f'{imp:.3f}' for imp in importance_df['Importance']],
-            textposition='auto'
+            textposition='auto',
+            textfont=dict(size=11)
         ))
         fig.update_layout(
             title=title,
@@ -222,6 +260,7 @@ class Visualizer:
             yaxis_title="Features",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=450,
             margin=dict(l=150)
         )
@@ -234,15 +273,22 @@ class Visualizer:
         df.columns = ['Model', 'R2_Score', 'MAE', 'RMSE']
         sorted_df = df.sort_values('R2_Score', ascending=True)
         
+        colors = []
+        for model in sorted_df['Model']:
+            if 'Gradient' in model:
+                colors.append(Visualizer.COLOR_SCHEME['success'])
+            else:
+                colors.append(Visualizer.COLOR_SCHEME['primary'])
+        
         fig = go.Figure()
         fig.add_trace(go.Bar(
             y=sorted_df['Model'],
             x=sorted_df['R2_Score'],
             orientation='h',
-            marker_color=[Visualizer.COLOR_SCHEME['success'] if 'Gradient' in m else Visualizer.COLOR_SCHEME['primary'] 
-                          for m in sorted_df['Model']],
+            marker_color=colors,
             text=[f'{score:.4f}' for score in sorted_df['R2_Score']],
             textposition='auto',
+            textfont=dict(size=11),
             name='R² Score'
         ))
         fig.update_layout(
@@ -251,6 +297,7 @@ class Visualizer:
             yaxis_title="Model",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=400,
             xaxis=dict(range=[0, 0.5])
         )
@@ -268,7 +315,8 @@ class Visualizer:
             orientation='h',
             marker_color=Visualizer.COLOR_SCHEME['secondary'],
             text=[f'{imp:.1%}' for imp in sorted_df['Importance']],
-            textposition='auto'
+            textposition='auto',
+            textfont=dict(size=11)
         ))
         fig.update_layout(
             title="Feature Importance - National Exam Score (Gradient Boosting)",
@@ -276,7 +324,9 @@ class Visualizer:
             yaxis_title="Features",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
-            height=500
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
+            height=500,
+            margin=dict(l=200)
         )
         return fig
     
@@ -290,7 +340,8 @@ class Visualizer:
             colorscale='Blues',
             text=cm,
             texttemplate='%{text}',
-            textfont={"size": 16}
+            textfont={"size": 16},
+            hoverongaps=False
         ))
         fig.update_layout(
             title="Confusion Matrix - Risk Classification",
@@ -298,6 +349,7 @@ class Visualizer:
             yaxis_title="Actual",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=400
         )
         return fig
@@ -326,6 +378,7 @@ class Visualizer:
             yaxis_title="True Positive Rate",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=450,
             xaxis=dict(range=[0, 1]),
             yaxis=dict(range=[0, 1.05])
@@ -343,7 +396,8 @@ class Visualizer:
                               Visualizer.COLOR_SCHEME['warning'], 
                               Visualizer.COLOR_SCHEME['danger']],
                 text=list(cluster_sizes.values()),
-                textposition='auto'
+                textposition='auto',
+                textfont=dict(size=14)
             )
         ])
         fig.update_layout(
@@ -352,6 +406,7 @@ class Visualizer:
             yaxis_title="Number of Students",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=400
         )
         return fig
@@ -369,7 +424,8 @@ class Visualizer:
                 orientation='h',
                 marker_color=Visualizer.COLOR_SCHEME['danger'],
                 text=[f'{v:.1f}%' for v in risk_df['Risk %']],
-                textposition='auto'
+                textposition='auto',
+                textfont=dict(size=11)
             )
         ])
         fig.update_layout(
@@ -378,6 +434,7 @@ class Visualizer:
             yaxis_title="Region",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=550,
             margin=dict(l=150)
         )
@@ -405,6 +462,7 @@ class Visualizer:
             yaxis_title="Region",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=550,
             xaxis=dict(tickangle=0)
         )
@@ -422,8 +480,8 @@ class Visualizer:
             marker=dict(color=Visualizer.COLOR_SCHEME['primary'], size=6, opacity=0.6)
         ))
         fig.add_trace(go.Scatter(
-            x=[y_test.min(), y_test.max()],
-            y=[y_test.min(), y_test.max()],
+            x=[min(y_test.min(), y_pred.min()), max(y_test.max(), y_pred.max())],
+            y=[min(y_test.min(), y_pred.min()), max(y_test.max(), y_pred.max())],
             mode='lines',
             name='Perfect Prediction',
             line=dict(dash='dash', color=Visualizer.COLOR_SCHEME['secondary'], width=2)
@@ -434,6 +492,7 @@ class Visualizer:
             yaxis_title="Predicted Overall Average",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
             height=400
         )
         return fig
@@ -462,4 +521,60 @@ class Visualizer:
             }
         ))
         fig.update_layout(height=250)
+        return fig
+    
+    
+    @staticmethod
+    def create_scatter_plot(df, x_col, y_col):
+        """Create scatter plot for two variables"""
+        if x_col not in df.columns or y_col not in df.columns:
+            return go.Figure()
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=df[x_col],
+            y=df[y_col],
+            mode='markers',
+            marker=dict(color=Visualizer.COLOR_SCHEME['primary'], size=6, opacity=0.6),
+            name=f'{y_col} vs {x_col}'
+        ))
+        
+        fig.update_layout(
+            title=f"{y_col} vs {x_col}",
+            xaxis_title=x_col,
+            yaxis_title=y_col,
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            height=400
+        )
+        return fig
+    
+    @staticmethod
+    def create_boxplot(df, x_col, y_col):
+        """Create boxplot by category"""
+        if x_col not in df.columns or y_col not in df.columns:
+            fig = go.Figure()
+            fig.update_layout(title=f"Data not available for {x_col} or {y_col}")
+            return fig
+        
+        fig = go.Figure()
+        
+        categories = df[x_col].unique()
+        for cat in categories:
+            fig.add_trace(go.Box(
+                y=df[df[x_col] == cat][y_col],
+                name=str(cat),
+                marker_color=Visualizer.COLOR_SCHEME['primary'],
+                boxmean='sd'
+            ))
+        
+        fig.update_layout(
+            title=f"{y_col} Distribution by {x_col}",
+            xaxis_title=x_col,
+            yaxis_title=y_col,
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            font=dict(color=Visualizer.COLOR_SCHEME['text']),
+            height=400
+        )
         return fig
