@@ -8,12 +8,13 @@ import warnings
 warnings.filterwarnings('ignore')
 
 class DataProcessor:
-    """Data preprocessing and encoding class"""
+    """Data preprocessing and encoding class - matches Dash app exactly"""
     
     def __init__(self, config_path=None):
         self.target_encoders = {}
         self.feature_names = None
         self.config = self._load_config(config_path)
+        self.raw_data = None
         
     def _load_config(self, config_path):
         """Load configuration from JSON file"""
@@ -23,8 +24,9 @@ class DataProcessor:
         return {}
     
     def load_and_preprocess_data(self, df_original):
-        """Load and preprocess the Ethiopian student dataset"""
+        """Load and preprocess the Ethiopian student dataset - ENHANCED VERSION"""
         df = df_original.copy()
+        self.raw_data = df.copy()
         
         # Drop Student_ID
         df = df.drop(columns=['Student_ID'], errors='ignore')
@@ -219,12 +221,8 @@ class DataProcessor:
         return df_encoded
     
     def prepare_features_for_prediction(self, input_data):
-        """Prepare input data for prediction"""
-        # Create dataframe from input
+        """Prepare input data for prediction using same pipeline as training"""
         df = pd.DataFrame([input_data])
-        
-        # Process through the same pipeline
         df = self.load_and_preprocess_data(df)
         df = self.encode_categorical_features(df)
-        
         return df
