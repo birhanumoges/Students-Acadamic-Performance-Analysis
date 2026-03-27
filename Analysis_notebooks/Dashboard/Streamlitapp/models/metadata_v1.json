@@ -56,6 +56,6 @@
         "Health_Issue_Flag",
         "Health_Issue_Severity"
     ],
-    "target": "your_target_column",
+    "target": "average_score",
     "version": "v1"
 }
