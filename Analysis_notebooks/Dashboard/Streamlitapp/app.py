@@ -8,6 +8,7 @@ import os
 import sys
 import json
 from datetime import datetime
+from sklearn.metrics import roc_curve
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -21,7 +22,7 @@ from utils.visualizations import Visualizer
 
 # Page configuration
 st.set_page_config(
-    page_title="Ethiopian Student Performance Dashboard",
+    page_title="Ethiopian Student Performance Analytics Dashboard",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -75,9 +76,6 @@ st.markdown("""
         border-radius: 5px;
         font-weight: 500;
     }
-    .stProgress > div > div > div > div {
-        background-color: #2E86AB;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -92,21 +90,21 @@ if 'prediction_engine' not in st.session_state:
     st.session_state.prediction_engine = None
 if 'data_processor' not in st.session_state:
     st.session_state.data_processor = None
+if 'config' not in st.session_state:
+    st.session_state.config = None
 if 'risk_threshold' not in st.session_state:
     st.session_state.risk_threshold = 0.5
-if 'selected_student' not in st.session_state:
-    st.session_state.selected_student = None
 
-# Model paths
+# Paths
 MODEL_PATHS = {
     'regression': 'models/gradient_boosting_regression.pkl',
     'classification': 'models/classification_model.pkl'
 }
-
 CONFIG_PATH = 'config/settings.json'
-DATA_PATH = "C:/Users/DELL/Documents/project_data/ethiopian_students_dataset.csv"
+DATA_PATH = 'data/ethiopian_students_dataset.csv'
 
 # Load configuration
+@st.cache_data
 def load_config():
     """Load configuration from JSON file"""
     if os.path.exists(CONFIG_PATH):
@@ -153,9 +151,6 @@ def load_data():
                 'Home_Internet_Access': np.random.choice(['Yes', 'No'], n),
                 'Electricity_Access': np.random.choice(['Yes', 'No'], n),
                 'School_Location': np.random.choice(['Urban', 'Rural'], n),
-                'Father_Education': np.random.choice(['Unknown', 'Primary', 'High School', 'College', 'University'], n),
-                'Mother_Education': np.random.choice(['Unknown', 'Primary', 'High School', 'College', 'University'], n),
-                'Career_Interest': np.random.choice(['Teacher', 'Doctor', 'Engineer', 'Business', 'Government', 'Unknown'], n),
                 'School_Type': np.random.choice(['Public', 'Private', 'NGO-operated'], n)
             })
             return df_original
@@ -163,46 +158,39 @@ def load_data():
         st.error(f"Error loading data: {e}")
         return None
 
-# Initialize data processor and prediction engine
+# Initialize components
 def initialize_components():
     """Initialize data processor and prediction engine"""
     config = load_config()
-    
-    # Initialize data processor
     data_processor = DataProcessor(CONFIG_PATH)
-    
-    # Initialize prediction engine
     prediction_engine = PredictionEngine(MODEL_PATHS, CONFIG_PATH)
-    
-    return data_processor, prediction_engine
+    return data_processor, prediction_engine, config
 
-# Load data and initialize components
+# Load data and initialize
 if not st.session_state.data_loaded:
     with st.spinner("Loading data and models..."):
         df_original = load_data()
         if df_original is not None:
-            data_processor, prediction_engine = initialize_components()
+            data_processor, prediction_engine, config = initialize_components()
             
             st.session_state.df_original = df_original
             st.session_state.df_processed = data_processor.load_and_preprocess_data(df_original.copy())
             st.session_state.data_processor = data_processor
             st.session_state.prediction_engine = prediction_engine
-            st.session_state.data_loaded = True
-            
-            # Load config for thresholds
-            config = load_config()
+            st.session_state.config = config
             st.session_state.risk_threshold = config.get('risk_threshold', 0.5)
+            st.session_state.data_loaded = True
             
             st.success("✅ Dashboard ready!")
         else:
             st.error("Failed to load data")
 
 # Sidebar Navigation
-st.sidebar.title("📊 Student Performance Dashboard")
+st.sidebar.title("📊 Student Analytics")
 st.sidebar.markdown("---")
 
 nav_options = {
-    "📈 Overview": "Overview Dashboard with key metrics and visualizations",
+    "📈 Overview": "Dashboard overview with key metrics and visualizations",
     "👥 Students": "Student search, filtering, and individual profiles",
     "📊 Analytics": "Model performance, feature importance, and SHAP analysis",
     "🎯 Simulation": "What-if analysis and performance simulation",
@@ -213,13 +201,11 @@ nav_options = {
 selected_page = st.sidebar.radio(
     "Navigation",
     list(nav_options.keys()),
-    format_func=lambda x: f"{x}",
+    format_func=lambda x: x,
     help="Select a page to view"
 )
 
-# Show description for selected page
 st.sidebar.markdown(f"<small>{nav_options[selected_page]}</small>", unsafe_allow_html=True)
-
 st.sidebar.markdown("---")
 
 # Quick stats in sidebar
@@ -254,6 +240,7 @@ if selected_page == "📈 Overview" and st.session_state.data_loaded:
     
     df = st.session_state.df_processed
     df_original = st.session_state.df_original
+    config = st.session_state.config
     
     # KPI Cards
     col1, col2, col3, col4 = st.columns(4)
@@ -266,9 +253,9 @@ if selected_page == "📈 Overview" and st.session_state.data_loaded:
     with col1:
         st.metric("Total Students", f"{total_students:,}")
     with col2:
-        st.metric("Average Score", f"{avg_score:.1f}", delta=f"{avg_score - 50:.1f}" if avg_score != 50 else None)
+        st.metric("Average Score", f"{avg_score:.1f}")
     with col3:
-        st.metric("Pass Rate", f"{pass_rate:.1f}%", delta=f"{pass_rate - 50:.1f}%" if pass_rate != 50 else None)
+        st.metric("Pass Rate", f"{pass_rate:.1f}%")
     with col4:
         st.metric("At-Risk Students", f"{risk_students:,}", delta=f"{(risk_students/total_students*100):.1f}%", delta_color="inverse")
     
@@ -285,6 +272,10 @@ if selected_page == "📈 Overview" and st.session_state.data_loaded:
         st.plotly_chart(Visualizer.create_region_bar(df_original), use_container_width=True)
     with col2:
         st.plotly_chart(Visualizer.create_gender_bar(df), use_container_width=True)
+    
+    # Correlation Heatmap
+    st.markdown("### Feature Correlation Analysis")
+    st.plotly_chart(Visualizer.create_correlation_heatmap(df), use_container_width=True)
     
     # Summary Table
     st.markdown("### 📊 Quick Summary Statistics")
@@ -313,16 +304,18 @@ if selected_page == "📈 Overview" and st.session_state.data_loaded:
         - Real-time KPI monitoring
         - Score distribution analysis
         - Regional and demographic comparisons
+        - Feature correlation analysis
         
         **👥 Student Management**
-        - Searchable student database
-        - Individual student profiles
-        - Predictive analytics for each student
+        - Searchable student database with filters
+        - Individual student profiles with predictions
+        - Risk assessment and recommendations
         
         **📊 Analytics Suite**
         - Model performance metrics (R², MAE, RMSE, F1, AUC)
         - Feature importance analysis
         - SHAP explanations for interpretability
+        - National Exam model analysis
         
         **🎯 Simulation Tools**
         - What-if scenario analysis
@@ -372,13 +365,6 @@ elif selected_page == "👥 Students" and st.session_state.data_loaded:
         gender_filter = st.sidebar.selectbox("Gender", ["All", "Male", "Female"])
         if gender_filter != "All":
             display_df = display_df[display_df['Gender'] == gender_filter]
-    
-    # Attendance filter
-    if 'Overall_Avg_Attendance' in df_processed.columns:
-        attendance_range = st.sidebar.slider("Attendance (%)", 0, 100, (0, 100))
-        student_ids = df_processed[(df_processed['Overall_Avg_Attendance'] >= attendance_range[0]) & 
-                                    (df_processed['Overall_Avg_Attendance'] <= attendance_range[1])]['Student_ID'].tolist()
-        display_df = display_df[display_df['Student_ID'].isin(student_ids)]
     
     # Risk filter
     risk_filter = st.sidebar.selectbox("Risk Status", ["All", "At Risk", "Not at Risk"])
@@ -472,7 +458,7 @@ elif selected_page == "📊 Analytics" and st.session_state.data_loaded:
     st.markdown("<p class='sub-header'>Model performance, feature importance, and SHAP analysis</p>", unsafe_allow_html=True)
     
     df = st.session_state.df_processed
-    config = load_config()
+    config = st.session_state.config
     
     # Create tabs
     tab1, tab2, tab3 = st.tabs(["🔍 Diagnostics", "🤖 Modeling", "💡 Explainability"])
@@ -485,16 +471,51 @@ elif selected_page == "📊 Analytics" and st.session_state.data_loaded:
             st.plotly_chart(Visualizer.create_correlation_heatmap(df), use_container_width=True)
         with col2:
             if 'Overall_Avg_Attendance' in df.columns and 'Overall_Average' in df.columns:
-                st.plotly_chart(Visualizer.create_scatter_plot(df, 'Overall_Avg_Attendance', 'Overall_Average'), use_container_width=True)
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=df['Overall_Avg_Attendance'],
+                    y=df['Overall_Average'],
+                    mode='markers',
+                    marker=dict(color=Visualizer.COLOR_SCHEME['primary'], size=6, opacity=0.6)
+                ))
+                fig.update_layout(
+                    title="Attendance vs Overall Score",
+                    xaxis_title="Attendance (%)",
+                    yaxis_title="Overall Score",
+                    plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+                    height=400
+                )
+                st.plotly_chart(fig, use_container_width=True)
         
-        st.markdown("### Distribution by Category")
-        col1, col2 = st.columns(2)
-        with col1:
-            if 'Region' in df.columns and 'Overall_Average' in df.columns:
-                st.plotly_chart(Visualizer.create_boxplot(df, 'Region', 'Overall_Average'), use_container_width=True)
-        with col2:
-            if 'Gender' in df.columns and 'Overall_Average' in df.columns:
-                st.plotly_chart(Visualizer.create_boxplot(df, 'Gender', 'Overall_Average'), use_container_width=True)
+        # Feature Category Plot
+        st.markdown("### Feature Distribution by Category")
+        feature_categories = {
+            'Student Factors': ['Gender', 'Parental_Involvement', 'Age', 'Field_Choice'],
+            'Academic Factors': ['Overall_Average', 'Overall_Avg_Attendance', 'Overall_Avg_Homework', 'Overall_Avg_Participation', 'Overall_Engagement_Score'],
+            'School Factors': ['School_Location', 'Teacher_Student_Ratio', 'School_Resources_Score', 'School_Academic_Score'],
+            'Health Factors': ['Health_Issue_Flag']
+        }
+        
+        category_counts = {}
+        for category, features in feature_categories.items():
+            existing = [f for f in features if f in df.columns]
+            category_counts[category] = len(existing)
+        
+        fig = go.Figure(data=[go.Bar(
+            x=list(category_counts.keys()),
+            y=list(category_counts.values()),
+            marker_color=Visualizer.COLOR_SCHEME['primary'],
+            text=list(category_counts.values()),
+            textposition='auto'
+        )])
+        fig.update_layout(
+            title="Feature Distribution by Category",
+            xaxis_title="Feature Category",
+            yaxis_title="Number of Features",
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            height=400
+        )
+        st.plotly_chart(fig, use_container_width=True)
     
     with tab2:
         st.markdown("### Regression Model Performance")
@@ -543,7 +564,6 @@ elif selected_page == "📊 Analytics" and st.session_state.data_loaded:
         tpr = np.minimum(tpr, 1)
         st.plotly_chart(Visualizer.create_roc_curve(fpr, tpr, 0.9178), use_container_width=True)
         
-        # National Exam Model
         st.markdown("---")
         st.markdown("### National Exam Score Model Performance")
         national_exam = config.get('national_exam_performance', {})
@@ -554,13 +574,21 @@ elif selected_page == "📊 Analytics" and st.session_state.data_loaded:
         st.markdown("### Feature Importance Analysis")
         
         # Regression Feature Importance
-        st.markdown("#### Regression Model (XGBoost)")
-        reg_importance = config.get('feature_importance', {}).get('regression', {})
-        st.plotly_chart(Visualizer.create_feature_importance_plot(reg_importance, "Top 10 Features - XGBoost"), use_container_width=True)
+        st.markdown("#### Regression Model (XGBoost) - Top 10 Features")
+        reg_importance = config.get('regression_feature_importance', {})
+        st.plotly_chart(Visualizer.create_feature_importance_plot(reg_importance, "Top 10 Features - XGBoost Regression"), use_container_width=True)
         
-        st.markdown("#### Classification Model (Gradient Boosting)")
-        class_importance = config.get('feature_importance', {}).get('classification', {})
-        st.plotly_chart(Visualizer.create_feature_importance_plot(class_importance, "Top 10 Features - Gradient Boosting"), use_container_width=True)
+        st.markdown("#### Classification Model (Gradient Boosting) - Top 10 Features")
+        class_importance = config.get('classification_feature_importance', {})
+        st.plotly_chart(Visualizer.create_feature_importance_plot(class_importance, "Top 10 Features - Gradient Boosting Classification"), use_container_width=True)
+        
+        # National Exam Feature Importance
+        st.markdown("---")
+        st.markdown("### National Exam Model Feature Importance")
+        national_importance = config.get('national_exam_feature_importance', [])
+        if national_importance:
+            imp_df = pd.DataFrame(national_importance)
+            st.plotly_chart(Visualizer.create_national_exam_feature_importance_plot(imp_df), use_container_width=True)
         
         # SHAP Analysis Section
         st.markdown("---")
@@ -613,23 +641,19 @@ elif selected_page == "🎯 Simulation" and st.session_state.data_loaded:
     st.markdown("<h1 class='main-header'>🎯 Performance Simulation</h1>", unsafe_allow_html=True)
     st.markdown("<p class='sub-header'>What-if analysis - Adjust parameters to see impact on student performance</p>", unsafe_allow_html=True)
     
-    df_original = st.session_state.df_original
     prediction_engine = st.session_state.prediction_engine
     data_processor = st.session_state.data_processor
     
     # Input mode selection
     mode = st.radio("Input Mode", ["Manual Input", "Select Existing Student"], horizontal=True)
     
-    if mode == "Select Existing Student":
-        # Student selection dropdown
+    if mode == "Select Existing Student" and st.session_state.df_original is not None:
+        df_original = st.session_state.df_original
         student_options = df_original.head(100)[['Student_ID', 'Region']].copy()
         student_options['Display'] = student_options['Student_ID'].astype(str) + " - " + student_options['Region']
         selected_student_display = st.selectbox("Select Student", student_options['Display'].tolist())
         selected_id = int(selected_student_display.split(" - ")[0])
         student_data = df_original[df_original['Student_ID'] == selected_id].iloc[0].to_dict()
-        
-        # Display current values
-        st.info(f"**Selected Student:** ID {selected_id} from {student_data.get('Region', 'N/A')}")
         
         # Load current values
         school_resources = student_data.get('School_Resources_Score', 0.5)
@@ -640,8 +664,8 @@ elif selected_page == "🎯 Simulation" and st.session_state.data_loaded:
         teacher_ratio = student_data.get('Teacher_Student_Ratio', 40)
         parental = student_data.get('Parental_Involvement', 0.5)
         
+        st.info(f"**Selected Student:** ID {selected_id} from {student_data.get('Region', 'N/A')}")
     else:
-        # Manual input with default values
         school_resources = 0.5
         attendance = 75
         homework = 65
@@ -656,14 +680,10 @@ elif selected_page == "🎯 Simulation" and st.session_state.data_loaded:
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("**🏫 School Factors**")
-        new_school_resources = st.slider("School Resources Score", 0.0, 1.0, school_resources, 0.05, 
-                                          help="0 = Poor, 1 = Excellent")
-        new_teacher_ratio = st.slider("Teacher-Student Ratio", 10, 100, int(teacher_ratio), 
-                                       help="Lower is better")
-        new_textbook = st.slider("Textbook Access", 0.0, 1.0, textbook, 0.05,
-                                  help="0 = None, 1 = Full access")
-        new_parental = st.slider("Parental Involvement", 0.0, 1.0, parental, 0.05,
-                                  help="0 = None, 1 = High")
+        new_school_resources = st.slider("School Resources Score", 0.0, 1.0, school_resources, 0.05)
+        new_teacher_ratio = st.slider("Teacher-Student Ratio", 10, 100, int(teacher_ratio))
+        new_textbook = st.slider("Textbook Access", 0.0, 1.0, textbook, 0.05)
+        new_parental = st.slider("Parental Involvement", 0.0, 1.0, parental, 0.05)
     
     with col2:
         st.markdown("**📚 Student Engagement**")
@@ -703,33 +723,13 @@ elif selected_page == "🎯 Simulation" and st.session_state.data_loaded:
             risk_prob = prediction_engine.predict_risk(features_df)
             is_risk = risk_prob > st.session_state.risk_threshold
             
-            # Calculate improvements from baseline
-            baseline_data = input_data.copy()
-            baseline_data['School_Resources_Score'] = school_resources
-            baseline_data['Overall_Avg_Attendance'] = attendance
-            baseline_data['Overall_Avg_Homework'] = homework
-            baseline_data['Overall_Avg_Participation'] = participation
-            baseline_data['Overall_Textbook_Access_Composite'] = textbook
-            baseline_data['Teacher_Student_Ratio'] = teacher_ratio
-            baseline_data['Parental_Involvement'] = parental
-            baseline_engagement = (attendance * 0.4 + homework * 0.3 + participation * 0.3) / 100
-            baseline_data['Overall_Engagement_Score'] = baseline_engagement * 100
-            
-            baseline_features = data_processor.prepare_features_for_prediction(baseline_data)
-            baseline_score = prediction_engine.predict_score(baseline_features)
-            baseline_risk = prediction_engine.predict_risk(baseline_features)
-            
-            score_delta = predicted_score - baseline_score
-            risk_delta = risk_prob - baseline_risk
-            
             # Display results
             st.markdown("---")
             st.markdown("## 📊 Simulation Results")
             
             col1, col2 = st.columns(2)
             with col1:
-                st.metric("Predicted Score", f"{predicted_score:.1f}", 
-                          delta=f"{score_delta:+.1f}" if score_delta != 0 else None)
+                st.metric("Predicted Score", f"{predicted_score:.1f}")
                 
                 # Score gauge
                 fig = go.Figure(go.Indicator(
@@ -751,28 +751,10 @@ elif selected_page == "🎯 Simulation" and st.session_state.data_loaded:
                 st.plotly_chart(fig, use_container_width=True)
             
             with col2:
-                st.metric("Risk Probability", f"{risk_prob*100:.1f}%",
-                          delta=f"{risk_delta*100:+.1f}%" if risk_delta != 0 else None,
-                          delta_color="inverse" if risk_delta < 0 else "normal")
+                st.metric("Risk Probability", f"{risk_prob*100:.1f}%")
                 st.progress(risk_prob)
                 st.metric("Risk Status", "🔴 AT RISK" if is_risk else "🟢 NOT AT RISK")
                 st.plotly_chart(Visualizer.create_risk_gauge(risk_prob), use_container_width=True)
-            
-            # Improvement analysis
-            st.markdown("### 📈 Improvement Opportunities")
-            
-            improvements = []
-            if new_school_resources < 0.9:
-                improvements.append(("Increase School Resources by 0.2", 2.5, new_school_resources + 0.2))
-            if new_attendance < 95:
-                improvements.append(("Improve Attendance by 10%", 1.8, min(100, new_attendance + 10)))
-            if new_homework < 95:
-                improvements.append(("Improve Homework by 10%", 1.2, min(100, new_homework + 10)))
-            if new_textbook < 0.9:
-                improvements.append(("Improve Textbook Access by 0.2", 2.0, min(1.0, new_textbook + 0.2)))
-            
-            for name, impact, target in improvements[:3]:
-                st.success(f"**{name}:** +{impact:.1f} points estimated improvement")
             
             # Recommendations
             st.markdown("### 💡 Recommendations")
@@ -799,12 +781,12 @@ elif selected_page == "📋 Reports" and st.session_state.data_loaded:
     df_processed = st.session_state.df_processed
     prediction_engine = st.session_state.prediction_engine
     data_processor = st.session_state.data_processor
+    config = st.session_state.config
     
     # Report type selection
     report_type = st.selectbox(
         "Select Report Type",
-        ["Predictions Report", "Clusters Report", "Summary Statistics", "Full Dataset"],
-        help="Choose the type of report to generate"
+        ["Predictions Report", "Clusters Report", "Summary Statistics", "Full Dataset"]
     )
     
     if st.button("📊 Generate Report", type="primary", use_container_width=True):
@@ -812,7 +794,6 @@ elif selected_page == "📋 Reports" and st.session_state.data_loaded:
             if report_type == "Predictions Report":
                 st.markdown("### Student Predictions Report")
                 
-                # Generate predictions for sample
                 report_df = df_original.head(500).copy()
                 
                 with st.spinner("Computing predictions..."):
@@ -833,12 +814,10 @@ elif selected_page == "📋 Reports" and st.session_state.data_loaded:
                     report_df['Risk_Probability'] = risks
                     report_df['Risk_Status'] = report_df['Risk_Probability'].apply(lambda x: 'At Risk' if x > st.session_state.risk_threshold else 'Not at Risk')
                 
-                # Display report
                 display_cols = ['Student_ID', 'Region', 'Gender', 'Overall_Average', 'Predicted_Score', 'Risk_Probability', 'Risk_Status']
                 display_cols = [c for c in display_cols if c in report_df.columns]
                 st.dataframe(report_df[display_cols], use_container_width=True)
                 
-                # Download button
                 csv = report_df.to_csv(index=False)
                 st.download_button(
                     label="📥 Download CSV",
@@ -847,8 +826,6 @@ elif selected_page == "📋 Reports" and st.session_state.data_loaded:
                     mime="text/csv"
                 )
                 
-                # Summary stats
-                st.markdown("### Summary Statistics")
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     st.metric("Total Students", len(report_df))
@@ -861,7 +838,6 @@ elif selected_page == "📋 Reports" and st.session_state.data_loaded:
             elif report_type == "Clusters Report":
                 st.markdown("### Student Clusters Report")
                 
-                config = load_config()
                 clusters = config.get('clustering', {})
                 cluster_sizes = clusters.get('cluster_sizes', {'Low': 0, 'Medium': 0, 'High': 0})
                 
@@ -876,20 +852,10 @@ elif selected_page == "📋 Reports" and st.session_state.data_loaded:
                 cluster_df = df_original.copy()
                 cluster_df['Performance_Cluster'] = cluster_assignments
                 
-                # Cluster summary
                 st.markdown("#### Cluster Distribution")
                 cluster_summary = cluster_df['Performance_Cluster'].value_counts()
                 st.dataframe(pd.DataFrame(cluster_summary), use_container_width=True)
                 
-                # Cluster profiles
-                st.markdown("#### Cluster Profiles")
-                cluster_profiles = cluster_df.groupby('Performance_Cluster').agg({
-                    'Overall_Average': 'mean',
-                    'Student_ID': 'count'
-                }).round(2)
-                st.dataframe(cluster_profiles, use_container_width=True)
-                
-                # Download button
                 csv = cluster_df.to_csv(index=False)
                 st.download_button(
                     label="📥 Download CSV",
@@ -901,7 +867,6 @@ elif selected_page == "📋 Reports" and st.session_state.data_loaded:
             elif report_type == "Summary Statistics":
                 st.markdown("### Summary Statistics Report")
                 
-                # Create summary
                 summary_data = []
                 numeric_cols = df_processed.select_dtypes(include=[np.number]).columns.tolist()
                 
@@ -929,7 +894,6 @@ elif selected_page == "📋 Reports" and st.session_state.data_loaded:
             elif report_type == "Full Dataset":
                 st.markdown("### Full Dataset Export")
                 
-                # Select columns to export
                 export_cols = st.multiselect(
                     "Select columns to export",
                     options=df_original.columns.tolist(),
@@ -953,7 +917,6 @@ elif selected_page == "📋 Reports" and st.session_state.data_loaded:
     st.markdown("### 📄 Quick Summary")
     
     if st.button("📄 Generate Quick Summary"):
-        config = load_config()
         clusters = config.get('clustering', {})
         reg_perf = config.get('model_performance', {}).get('regression', {})
         class_perf = config.get('model_performance', {}).get('classification', {})
@@ -1021,7 +984,6 @@ elif selected_page == "⚙️ Settings" and st.session_state.data_loaded:
     with col2:
         if st.button("📊 Test Models", use_container_width=True):
             with st.spinner("Testing models..."):
-                # Test with sample data
                 test_features = st.session_state.data_processor.prepare_features_for_prediction({
                     'School_Resources_Score': 0.7,
                     'Overall_Engagement_Score': 75,
@@ -1046,8 +1008,7 @@ elif selected_page == "⚙️ Settings" and st.session_state.data_loaded:
     
     # Feature Validation
     st.markdown("### 📋 Required Features for Prediction")
-    config = load_config()
-    required_features = config.get('required_features', [
+    required_features = st.session_state.config.get('required_features', [
         "School_Resources_Score", "Overall_Engagement_Score", "School_Academic_Score",
         "Overall_Textbook_Access_Composite", "Overall_Avg_Attendance", "Teacher_Student_Ratio",
         "Overall_Avg_Homework", "Overall_Avg_Participation", "Parental_Involvement",
@@ -1089,8 +1050,8 @@ elif selected_page == "⚙️ Settings" and st.session_state.data_loaded:
     **Ethiopian Student Performance Dashboard v1.0**
     
     **Models:**
-    - Regression: XGBoost (R² = 0.7855)
-    - Classification: Gradient Boosting (AUC = 0.918)
+    - Regression: XGBoost (R² = 0.7855, MAE = 2.98)
+    - Classification: Gradient Boosting (AUC = 0.918, F1 = 0.778)
     
     **Features:**
     - Real-time student performance prediction
@@ -1099,14 +1060,19 @@ elif selected_page == "⚙️ Settings" and st.session_state.data_loaded:
     - Comprehensive analytics with SHAP
     - Exportable reports
     
-    **Data Source:** Ethiopian Students Dataset
+    **Data Source:** Ethiopian Students Dataset (100,000+ students)
+    
+    **Model Performance from Training:**
+    - 5-fold Cross-Validation R²: 0.7837 ± 0.0021
+    - Excellent Generalization (Test-CV diff: 0.0018)
+    - SMOTE balanced classification (50,810 samples per class)
     """)
 
 # Footer
 st.markdown("---")
 st.markdown(
     "<p style='text-align: center; color: #666; font-size: 12px;'>"
-    "© 2024 Ethiopian Student Performance Analytics Dashboard | Powered by Machine Learning"
+    "© 2025 Ethiopian Student Performance Analytics Dashboard | Powered by Machine Learning | XGBoost & Gradient Boosting"
     "</p>", 
     unsafe_allow_html=True
 )
