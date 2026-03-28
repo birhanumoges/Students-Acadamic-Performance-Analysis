@@ -778,9 +778,42 @@ elif selected_page == "📊 Analytics":
     with tab1:
         st.markdown("### Diagnostic Analysis")
         
-        # Correlation Heatmap
+        # ====================================================================
+        # CORRELATION HEATMAP - EXCLUDING STUDENT_ID AND GRADE LEVELS
+        # ====================================================================
+        
+        # Define columns to exclude
+        exclude_columns = ['Student_ID']
+        
+        # Add all grade level columns
+        for i in range(1, 13):
+            grade_col = f'Grade_{i}'
+            if grade_col in df.columns:
+                exclude_columns.append(grade_col)
+            # Also check for Test_Score, Attendance variations
+            if f'{grade_col}_Test_Score' in df.columns:
+                exclude_columns.append(f'{grade_col}_Test_Score')
+            if f'{grade_col}_Attendance' in df.columns:
+                exclude_columns.append(f'{grade_col}_Attendance')
+        
+        # Get numeric columns
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        corr_data = df[numeric_cols[:15]].corr()
+        
+        # Filter out excluded columns
+        numeric_cols = [col for col in numeric_cols if col not in exclude_columns]
+        
+        # Limit to top features if too many
+        if len(numeric_cols) > 15:
+            if 'Overall_Average' in numeric_cols:
+                correlations = df[numeric_cols].corr()['Overall_Average'].abs().sort_values(ascending=False)
+                top_features = correlations.head(15).index.tolist()
+                corr_data = df[top_features].corr()
+            else:
+                corr_data = df[numeric_cols[:15]].corr()
+        else:
+            corr_data = df[numeric_cols].corr()
+        
+        # Create heatmap
         fig = go.Figure(data=go.Heatmap(
             z=corr_data.values,
             x=corr_data.columns,
@@ -792,7 +825,7 @@ elif selected_page == "📊 Analytics":
             textfont={"size": 10}
         ))
         fig.update_layout(
-            title="Feature Correlation Heatmap",
+            title="Feature Correlation Heatmap (Excluding Student_ID and Grade Levels)",
             xaxis_title="Features",
             yaxis_title="Features",
             height=600,
