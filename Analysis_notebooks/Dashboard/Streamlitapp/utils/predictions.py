@@ -1,3 +1,4 @@
+# utils/predictions.py
 """
 Prediction utilities for Ethiopian Student Performance Dashboard
 """
@@ -5,177 +6,137 @@ Prediction utilities for Ethiopian Student Performance Dashboard
 import pandas as pd
 import numpy as np
 import joblib
+import json
 import os
+from pathlib import Path
 import warnings
 warnings.filterwarnings('ignore')
 
-from sklearn.preprocessing import StandardScaler
-
-
-def get_model_dir():
-    """Get the correct model directory path"""
-    # Get the directory where this file is located
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    # Go up one level to the Streamlitapp directory, then to models
-    model_dir = os.path.join(os.path.dirname(current_dir), "models")
-    
-    # Also check if models directory exists in current directory
-    if not os.path.exists(model_dir):
-        model_dir = os.path.join(current_dir, "models")
-    
-    return model_dir
-
-
-def load_models(model_dir=None):
-    """Load trained models from pickle files"""
-    if model_dir is None:
-        model_dir = get_model_dir()
-    
-    reg_model = None
-    class_model = None
-    reg_scaler = None
-    class_scaler = None
-    reg_features = None
-    class_features = None
-    
-    try:
-        # Load regression model
-        reg_path = os.path.join(model_dir, "gradient_boosting_regression.pkl")
-        if os.path.exists(reg_path):
-            print(f"✓ Loading regression model from: {reg_path}")
-            reg_data = joblib.load(reg_path)
-            if isinstance(reg_data, dict):
-                reg_model = reg_data.get('model')
-                reg_scaler = reg_data.get('scaler')
-                reg_features = reg_data.get('feature_names')
-            else:
-                reg_model = reg_data
-                reg_scaler = StandardScaler()
-                reg_features = None
-            print(f"✓ Regression model loaded")
-        else:
-            print(f"⚠ Regression model not found at {reg_path}")
-        
-        # Load classification model
-        class_path = os.path.join(model_dir, "classification_model.pkl")
-        if os.path.exists(class_path):
-            print(f"✓ Loading classification model from: {class_path}")
-            class_data = joblib.load(class_path)
-            if isinstance(class_data, dict):
-                class_model = class_data.get('model')
-                class_scaler = class_data.get('scaler')
-                class_features = class_data.get('feature_names')
-            else:
-                class_model = class_data
-                class_scaler = StandardScaler()
-                class_features = None
-            print(f"✓ Classification model loaded")
-        else:
-            print(f"⚠ Classification model not found at {class_path}")
-        
-        # Create dummy models if needed (for testing)
-        if reg_model is None:
-            from sklearn.ensemble import GradientBoostingRegressor
-            reg_model = GradientBoostingRegressor(n_estimators=100, random_state=42)
-            reg_scaler = StandardScaler()
-            reg_features = ['Overall_Avg_Attendance', 'Overall_Avg_Homework', 
-                           'Overall_Avg_Participation', 'School_Resources_Score', 
-                           'Overall_Textbook_Access_Composite']
-        
-        if class_model is None:
-            from sklearn.ensemble import GradientBoostingClassifier
-            class_model = GradientBoostingClassifier(n_estimators=100, random_state=42)
-            class_scaler = StandardScaler()
-            class_features = reg_features.copy() if reg_features else ['Overall_Avg_Attendance', 'Overall_Avg_Homework']
-            
-    except Exception as e:
-        print(f"Error loading models: {e}")
-    
-    return reg_model, class_model, reg_scaler, class_scaler, reg_features, class_features
-
 
 class PredictionEngine:
-    """Prediction engine class"""
+    """Prediction engine using saved trained models"""
     
-    def __init__(self, model_paths=None):
+    def __init__(self, model_dir=None):
+        self.model_dir = model_dir or Path(__file__).resolve().parent.parent / "models"
         self.reg_model = None
         self.clf_model = None
-        self.reg_scaler = None
-        self.clf_scaler = None
-        self.reg_features = None
-        self.clf_features = None
-        self.load_models(model_paths)
+        self.feature_order = []
+        self._load_models()
     
-    def load_models(self, model_paths=None):
-        """Load models"""
-        if model_paths:
-            reg_path = model_paths.get('regression')
-            class_path = model_paths.get('classification')
-        else:
-            reg_path = None
-            class_path = None
-        
-        if reg_path and os.path.exists(reg_path):
-            reg_data = joblib.load(reg_path)
-            if isinstance(reg_data, dict):
-                self.reg_model = reg_data.get('model')
-                self.reg_scaler = reg_data.get('scaler')
-                self.reg_features = reg_data.get('feature_names')
-            else:
-                self.reg_model = reg_data
-                self.reg_scaler = StandardScaler()
-        
-        if class_path and os.path.exists(class_path):
-            class_data = joblib.load(class_path)
-            if isinstance(class_data, dict):
-                self.clf_model = class_data.get('model')
-                self.clf_scaler = class_data.get('scaler')
-                self.clf_features = class_data.get('feature_names')
-            else:
-                self.clf_model = class_data
-                self.clf_scaler = StandardScaler()
+    def _load_models(self):
+        """Load saved models"""
+        try:
+            # Load regression model
+            reg_path = self.model_dir / "gradient_boosting_model_full.pkl"
+            if reg_path.exists():
+                reg_data = joblib.load(reg_path)
+                if isinstance(reg_data, dict):
+                    self.reg_model = reg_data.get('model', reg_data.get('regressor'))
+                else:
+                    self.reg_model = reg_data
+            
+            # Load classification model
+            clf_path = self.model_dir / "student_risk_classifier.pkl"
+            if clf_path.exists():
+                clf_data = joblib.load(clf_path)
+                if isinstance(clf_data, dict):
+                    self.clf_model = clf_data.get('model', clf_data.get('classifier'))
+                else:
+                    self.clf_model = clf_data
+            
+            # Load metadata
+            metadata_path = self.model_dir / "metadata_classification_v1.json"
+            if metadata_path.exists():
+                with open(metadata_path, 'r') as f:
+                    self.metadata = json.load(f)
+                    self.feature_order = self.metadata.get('feature_order', self.metadata.get('features', []))
+                    
+        except Exception as e:
+            print(f"Error loading models: {e}")
     
-    def predict_score(self, features_df):
+    def predict_score(self, input_data):
         """Predict overall average score"""
         if self.reg_model is None:
-            # Fallback formula
-            score = 50.0
-            if 'School_Resources_Score' in features_df.columns:
-                score = (60.4 * features_df['School_Resources_Score'].values[0] +
-                         17.9 * features_df.get('Overall_Engagement_Score', pd.Series([70])).values[0] / 100 +
-                         7.25 * features_df.get('School_Academic_Score', pd.Series([0.5])).values[0] +
-                         7.14 * features_df.get('Overall_Textbook_Access_Composite', pd.Series([0.5])).values[0] +
-                         2.87 * features_df.get('Overall_Avg_Attendance', pd.Series([75])).values[0] / 100 +
-                         2.02 * features_df.get('Teacher_Student_Ratio', pd.Series([40])).values[0] / 100 +
-                         1.72 * features_df.get('Overall_Avg_Homework', pd.Series([65])).values[0] / 100 +
-                         0.85 * features_df.get('Overall_Avg_Participation', pd.Series([70])).values[0] / 100) * 0.8 + 20
-                score = max(0, min(100, score))
-            return score
+            # Fallback calculation
+            engagement = (input_data.get('Overall_Avg_Attendance', 75) * 0.4 +
+                         input_data.get('Overall_Avg_Homework', 65) * 0.3 +
+                         input_data.get('Overall_Avg_Participation', 70) * 0.3) / 100
+            score = (60.4 * input_data.get('School_Resources_Score', 0.5) +
+                    17.9 * engagement +
+                    7.14 * input_data.get('Overall_Textbook_Access_Composite', 0.5) +
+                    2.87 * input_data.get('Overall_Avg_Attendance', 75)/100 +
+                    2.02 * input_data.get('Teacher_Student_Ratio', 40)/100 +
+                    1.72 * input_data.get('Overall_Avg_Homework', 65)/100 +
+                    0.85 * input_data.get('Overall_Avg_Participation', 70)/100) * 0.8 + 20
+            return max(0, min(100, score))
         
         try:
-            if self.reg_scaler and self.reg_features:
-                X = features_df[self.reg_features]
-                X_scaled = self.reg_scaler.transform(X)
-                return self.reg_model.predict(X_scaled)[0]
-            else:
-                return self.reg_model.predict(features_df)[0]
+            # Simple preprocessing
+            df = pd.DataFrame([input_data])
+            
+            # Basic encoding
+            if 'Gender' in df.columns:
+                df['Gender'] = df['Gender'].map({'Male': 0, 'Female': 1})
+            if 'Home_Internet_Access' in df.columns:
+                df['Home_Internet_Access'] = df['Home_Internet_Access'].map({'Yes': 1, 'No': 0})
+            if 'Electricity_Access' in df.columns:
+                df['Electricity_Access'] = df['Electricity_Access'].map({'Yes': 1, 'No': 0})
+            if 'School_Location' in df.columns:
+                df['School_Location'] = df['School_Location'].map({'Urban': 1, 'Rural': 0})
+            if 'Textbook_Access' in df.columns:
+                df['Textbook_Access'] = df['Textbook_Access'].map({'Yes': 1, 'No': 0})
+            
+            # Calculate engagement
+            attendance = input_data.get('Overall_Avg_Attendance', 75)
+            homework = input_data.get('Overall_Avg_Homework', 65)
+            participation = input_data.get('Overall_Avg_Participation', 70)
+            df['Overall_Engagement_Score'] = (attendance * 0.4 + homework * 0.3 + participation * 0.3)
+            
+            # Ensure all features are present
+            if self.feature_order:
+                for feature in self.feature_order:
+                    if feature not in df.columns:
+                        df[feature] = 0
+                df = df[self.feature_order]
+            
+            prediction = self.reg_model.predict(df)[0]
+            return max(0, min(100, prediction))
         except Exception as e:
             print(f"Prediction error: {e}")
-            return 50.0
+            return 70.0
     
-    def predict_risk(self, features_df):
+    def predict_risk(self, input_data):
         """Predict risk probability"""
         if self.clf_model is None:
-            score = self.predict_score(features_df)
+            score = self.predict_score(input_data)
             return 1 / (1 + np.exp(-0.15 * (50 - score)))
         
         try:
-            if self.clf_scaler and self.clf_features:
-                X = features_df[self.clf_features]
-                X_scaled = self.clf_scaler.transform(X)
-                return self.clf_model.predict_proba(X_scaled)[0][1]
-            else:
-                return self.clf_model.predict_proba(features_df)[0][1]
+            df = pd.DataFrame([input_data])
+            
+            # Same preprocessing as above
+            if 'Gender' in df.columns:
+                df['Gender'] = df['Gender'].map({'Male': 0, 'Female': 1})
+            if 'Home_Internet_Access' in df.columns:
+                df['Home_Internet_Access'] = df['Home_Internet_Access'].map({'Yes': 1, 'No': 0})
+            if 'Electricity_Access' in df.columns:
+                df['Electricity_Access'] = df['Electricity_Access'].map({'Yes': 1, 'No': 0})
+            if 'School_Location' in df.columns:
+                df['School_Location'] = df['School_Location'].map({'Urban': 1, 'Rural': 0})
+            
+            attendance = input_data.get('Overall_Avg_Attendance', 75)
+            homework = input_data.get('Overall_Avg_Homework', 65)
+            participation = input_data.get('Overall_Avg_Participation', 70)
+            df['Overall_Engagement_Score'] = (attendance * 0.4 + homework * 0.3 + participation * 0.3)
+            
+            if self.feature_order:
+                for feature in self.feature_order:
+                    if feature not in df.columns:
+                        df[feature] = 0
+                df = df[self.feature_order]
+            
+            prediction = self.clf_model.predict_proba(df)[0][1]
+            return prediction
         except Exception as e:
             print(f"Risk prediction error: {e}")
             return 0.5
@@ -209,101 +170,34 @@ class PredictionEngine:
         return recommendations
 
 
+# ============================================================================
+# COMPATIBILITY FUNCTIONS
+# ============================================================================
+
+def load_models():
+    """Compatibility function to load models"""
+    engine = PredictionEngine()
+    return (engine.reg_model, engine.clf_model, None, None, 
+            engine.feature_order, engine.feature_order)
+
+
 def make_prediction_corrected(input_data, reg_model, class_model, reg_scaler, class_scaler,
                                reg_features, class_features, target_encoders, df_clean_local):
-    """Make prediction using loaded models"""
-    try:
-        from .data_processor import DataProcessor
-        
-        processor = DataProcessor()
-        
-        # Create dataframe from input
-        df = pd.DataFrame([input_data])
-        
-        # Preprocess
-        df = processor.load_and_preprocess_data(df)
-        df = processor.encode_categorical_features(df)
-        
-        # Ensure all expected columns
-        if reg_features:
-            for col in reg_features:
-                if col not in df.columns:
-                    df[col] = 0
-        
-        # Regression prediction
-        if reg_model is not None:
-            if reg_scaler and reg_features:
-                X_reg = df[reg_features]
-                X_reg_scaled = reg_scaler.transform(X_reg)
-                predicted_score = reg_model.predict(X_reg_scaled)[0]
-            else:
-                predicted_score = reg_model.predict(df)[0]
-        else:
-            predicted_score = 70.0
-        
-        # Classification prediction
-        if class_model is not None:
-            if class_scaler and class_features:
-                X_class = df[class_features]
-                X_class_scaled = class_scaler.transform(X_class)
-                risk_prob = class_model.predict_proba(X_class_scaled)[0][1]
-            else:
-                risk_prob = class_model.predict_proba(df)[0][1]
-        else:
-            risk_prob = 0.5
-        
-        is_risk = risk_prob >= 0.5
-        
-        # Risk factors
-        risk_factors = []
-        if input_data.get('School_Resources_Score', 0.5) < 0.4:
-            risk_factors.append("Low School Resources Score")
-        if input_data.get('Overall_Textbook_Access_Composite', 0.5) < 0.4:
-            risk_factors.append("Poor Textbook Access")
-        if input_data.get('Parental_Involvement', 0.5) < 0.3:
-            risk_factors.append("Low Parental Involvement")
-        if input_data.get('Teacher_Student_Ratio', 40) > 45:
-            risk_factors.append("High Teacher-Student Ratio")
-        
-        if is_risk:
-            risk_causes = risk_factors.copy() if risk_factors else ["Multiple factors contributing to risk"]
-        else:
-            risk_causes = [f"Potential area for improvement: {factor}" for factor in risk_factors] if risk_factors else ["All indicators are favorable"]
-        
-        # Recommendations
-        recommendations = []
-        if is_risk:
-            recommendations.append("🔴 Immediate Intervention Required")
-            recommendations.append("• Schedule academic counseling session")
-            recommendations.append("• Implement personalized learning plan")
-            if input_data.get('School_Resources_Score', 0.5) < 0.4:
-                recommendations.append("• Request additional learning materials")
-            if input_data.get('Overall_Textbook_Access_Composite', 0.5) < 0.4:
-                recommendations.append("• Provide access to digital textbooks")
-        else:
-            recommendations.append("✅ Student is Performing Well")
-            recommendations.append(f"• Predicted Overall Average: {predicted_score:.1f}")
-            recommendations.append(f"• Risk Probability: {risk_prob*100:.1f}%")
-            recommendations.append("• Maintain current study habits")
-        
-        return {
-            'predicted_score': float(predicted_score),
-            'risk_probability': float(risk_prob),
-            'is_risk': bool(is_risk),
-            'risk_causes': risk_causes,
-            'recommendations': recommendations,
-            'regression_metrics': {'model': 'XGBoost', 'r2': 0.7855, 'mae': 2.98, 'rmse': 3.72},
-            'classification_metrics': {'model': 'Gradient Boosting', 'f1': 0.7782, 'roc_auc': 0.9178},
-            'processing_steps': {
-                'step1': 'Raw input converted to DataFrame',
-                'step2': 'Applied encoding rules',
-                'step3': 'Columns aligned',
-                'step4': 'Predictions made'
-            }
-        }
-    except Exception as e:
-        print(f"Prediction error: {e}")
-        return None
+    """Compatibility function for predictions"""
+    engine = PredictionEngine()
+    predicted_score = engine.predict_score(input_data)
+    risk_prob = engine.predict_risk(input_data)
+    
+    return {
+        'predicted_score': predicted_score,
+        'risk_probability': risk_prob,
+        'is_risk': risk_prob > 0.5,
+        'risk_causes': [],
+        'recommendations': [],
+        'regression_metrics': {'model': 'XGBoost', 'r2': 0.7855, 'mae': 2.98, 'rmse': 3.72},
+        'classification_metrics': {'model': 'Gradient Boosting', 'f1': 0.7782, 'roc_auc': 0.9178},
+        'processing_steps': {}
+    }
 
 
 def get_national_exam_model_performance():
@@ -323,19 +217,7 @@ def get_national_exam_feature_importance():
         'Feature': [
             'Score_x_Participation', 'Overall_Avg_Homework', 'School_Academic_Score',
             'Overall_Test_Score_Avg', 'Overall_Avg_Attendance', 'Overall_Avg_Participation',
-            'School_Resources_Score', 'Parental_Involvement', 'Resource_Efficiency',
-            'Teacher_Student_Ratio', 'Student_to_Resources_Ratio', 'School_Type_Target',
-            'Overall_Engagement_Score', 'Teacher_Load_Adjusted',
-            'Overall_Textbook_Access_Composite', 'Field_Choice', 'Career_Interest_Encoded'
+            'School_Resources_Score', 'Parental_Involvement'
         ],
-        'Importance': [
-            0.735596, 0.071998, 0.066883, 0.043070, 0.017778, 0.016191,
-            0.013264, 0.011599, 0.005805, 0.005141, 0.002633, 0.002587,
-            0.001936, 0.001591, 0.001533, 0.001304, 0.001090
-        ],
-        'Importance_%': [
-            73.559627, 7.199785, 6.688265, 4.307000, 1.777779, 1.619086,
-            1.326450, 1.159938, 0.580545, 0.514109, 0.263260, 0.258688,
-            0.193604, 0.159140, 0.153329, 0.130358, 0.109039
-        ]
+        'Importance': [0.7356, 0.0720, 0.0669, 0.0431, 0.0178, 0.0162, 0.0133, 0.0116]
     })
