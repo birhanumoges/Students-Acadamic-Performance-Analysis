@@ -6,6 +6,7 @@ Complete Streamlit Dashboard with all features
 import streamlit as st
 import pandas as pd
 import numpy as np
+from scipy import stats
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
@@ -799,46 +800,100 @@ elif selected_page == "📊 Analytics":
         )
         st.plotly_chart(fig, use_container_width=True, key="diag_corr_heatmap")
         
-        # Scatter plots with column existence checks
+        # Scatter plots - Resources Score vs Score and Parental Involvement vs Score
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("#### Attendance vs Score")
-            if 'Overall_Avg_Attendance' in df.columns and 'Overall_Average' in df.columns:
+            st.markdown("#### Resources Score vs Score")
+            if 'School_Resources_Score' in df.columns and 'Overall_Average' in df.columns:
+                # Check if data has enough variation for trend line
+                x_data = df['School_Resources_Score'].dropna()
+                y_data = df['Overall_Average'].dropna()
+                
+                if len(x_data) > 1 and x_data.nunique() > 1:
+                    # Calculate trend line
+                    slope, intercept, r_value, p_value, std_err = stats.linregress(x_data, y_data)
+                    x_line = np.array([x_data.min(), x_data.max()])
+                    y_line = intercept + slope * x_line
+                    r_squared = r_value ** 2
+                else:
+                    slope = None
+                    r_squared = 0
+                
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
-                    x=df['Overall_Avg_Attendance'],
-                    y=df['Overall_Average'],
+                    x=x_data,
+                    y=y_data,
                     mode='markers',
-                    marker=dict(color='#2E86AB', size=6, opacity=0.6)
+                    marker=dict(color='#18A999', size=6, opacity=0.6),
+                    name='Data Points'
                 ))
+                
+                # Add trend line if available
+                if slope is not None:
+                    fig.add_trace(go.Scatter(
+                        x=x_line,
+                        y=y_line,
+                        mode='lines',
+                        name=f'Trend Line (R² = {r_squared:.3f})',
+                        line=dict(color='#F18F01', width=2, dash='dash')
+                    ))
+                
                 fig.update_layout(
-                    xaxis_title="Attendance (%)",
+                    xaxis_title="School Resources Score",
                     yaxis_title="Overall Score",
-                    height=400
+                    height=400,
+                    showlegend=True
                 )
-                st.plotly_chart(fig, use_container_width=True, key="diag_scatter_attendance")
+                st.plotly_chart(fig, use_container_width=True, key="diag_scatter_resources")
             else:
-                st.warning("Attendance data not available")
+                st.warning("School Resources data not available")
         
-    with col2:
-        st.markdown("#### Resources Score vs Score")
-        if 'School_Resources_Score' in df.columns and 'Overall_Average' in df.columns:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=df['School_Resources_Score'],
-                y=df['Overall_Average'],
-                mode='markers',
-                marker=dict(color='#18A999', size=6, opacity=0.6)
-            ))
-            fig.update_layout(
-                xaxis_title="School Resources Score",
-                yaxis_title="Overall Score",
-                height=400
-            )
-            st.plotly_chart(fig, use_container_width=True, key="diag_scatter_resources")
-        else:
-            st.warning("School Resources data not available")
+        with col2:
+            st.markdown("#### Parental Involvement vs Score")
+            if 'Parental_Involvement' in df.columns and 'Overall_Average' in df.columns:
+                # Check if data has enough variation for trend line
+                x_data = df['Parental_Involvement'].dropna()
+                y_data = df['Overall_Average'].dropna()
+                
+                if len(x_data) > 1 and x_data.nunique() > 1:
+                    # Calculate trend line
+                    slope, intercept, r_value, p_value, std_err = stats.linregress(x_data, y_data)
+                    x_line = np.array([x_data.min(), x_data.max()])
+                    y_line = intercept + slope * x_line
+                    r_squared = r_value ** 2
+                else:
+                    slope = None
+                    r_squared = 0
+                
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=x_data,
+                    y=y_data,
+                    mode='markers',
+                    marker=dict(color='#A23B72', size=6, opacity=0.6),
+                    name='Data Points'
+                ))
+                
+                # Add trend line if available
+                if slope is not None:
+                    fig.add_trace(go.Scatter(
+                        x=x_line,
+                        y=y_line,
+                        mode='lines',
+                        name=f'Trend Line (R² = {r_squared:.3f})',
+                        line=dict(color='#F18F01', width=2, dash='dash')
+                    ))
+                
+                fig.update_layout(
+                    xaxis_title="Parental Involvement Score",
+                    yaxis_title="Overall Score",
+                    height=400,
+                    showlegend=True
+                )
+                st.plotly_chart(fig, use_container_width=True, key="diag_scatter_parental")
+            else:
+                st.warning("Parental Involvement data not available")
     with tab2:
         st.markdown("### Model Performance")
         
