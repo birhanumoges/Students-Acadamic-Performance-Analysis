@@ -1,3 +1,4 @@
+# utils/visualizations.py
 """
 Visualization utilities for Ethiopian Student Performance Dashboard
 """
@@ -134,7 +135,6 @@ class Visualizer:
         
         gender_avg = df.groupby('Gender')['Overall_Average'].mean()
         
-        # Convert numeric to labels if needed
         if gender_avg.index.dtype in ['int64', 'float64']:
             labels = ['Male' if x == 0 else 'Female' for x in gender_avg.index]
         else:
@@ -217,8 +217,7 @@ class Visualizer:
             name=f'{y_col} vs {x_col}'
         ))
         
-        # Add trend line
-        if len(plot_df) > 1:
+        if len(plot_df) > 1 and plot_df[x_col].nunique() > 1:
             z = np.polyfit(plot_df[x_col], plot_df[y_col], 1)
             p = np.poly1d(z)
             x_trend = np.linspace(plot_df[x_col].min(), plot_df[x_col].max(), 100)
@@ -232,6 +231,35 @@ class Visualizer:
         
         fig.update_layout(
             title=f"{y_col} vs {x_col}",
+            xaxis_title=x_col,
+            yaxis_title=y_col,
+            plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
+            height=400
+        )
+        return fig
+    
+    @staticmethod
+    def create_boxplot(df, x_col, y_col):
+        """Create boxplot by category"""
+        if x_col not in df.columns or y_col not in df.columns:
+            return go.Figure()
+        
+        fig = go.Figure()
+        
+        categories = df[x_col].unique()
+        for cat in sorted(categories):
+            data = df[df[x_col] == cat][y_col].dropna()
+            if len(data) > 0:
+                fig.add_trace(go.Box(
+                    y=data,
+                    name=str(cat),
+                    marker_color=Visualizer.COLOR_SCHEME['primary'],
+                    boxmean='sd'
+                ))
+        
+        fig.update_layout(
+            title=f"{y_col} Distribution by {x_col}",
             xaxis_title=x_col,
             yaxis_title=y_col,
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
@@ -431,6 +459,10 @@ class Visualizer:
         fig.update_layout(height=250)
         return fig
 
+
+# ============================================================================
+# GLOBAL FUNCTIONS (for compatibility with existing app.py)
+# ============================================================================
 
 # Global variables
 NATIONAL_EXAM_MODEL_PERFORMANCE = None
