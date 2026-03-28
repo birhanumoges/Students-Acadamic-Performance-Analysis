@@ -1517,73 +1517,373 @@ elif selected_page == "📊 Analytics":
             st.markdown(insight)
 
 # ============================================================================
-# PAGE: SIMULATION
+# PAGE: SIMULATION (Using All Trained Features)
 # ============================================================================
-elif selected_page == "🎯 Simulation":
+elif selected_page == "🎯 Simulation" and st.session_state.data_loaded:
     st.markdown("<h1 class='main-header'>🎯 Performance Simulation</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='sub-header'>What-if analysis - Adjust parameters to see impact on student performance</p>", unsafe_allow_html=True)
+    st.markdown("<p class='sub-header'>What-if analysis - Adjust parameters to see impact on student performance using trained ML models</p>", unsafe_allow_html=True)
     
+    # Initialize prediction engine with all features
+    from utils.predictions import PredictionEngine
+    
+    # Load prediction engine
+    @st.cache_resource
+    def get_prediction_engine():
+        return PredictionEngine()
+    
+    prediction_engine = get_prediction_engine()
+    
+    # Input mode selection
+    mode = st.radio("Input Mode", ["Manual Input", "Select Existing Student"], horizontal=True, key="sim_mode")
+    
+    # Default values for all trained features
+    default_values = {
+        'Gender': 'Male',
+        'Parental_Involvement': 0.5,
+        'Home_Internet_Access': 'Yes',
+        'Electricity_Access': 'Yes',
+        'School_Location': 'Urban',
+        'Teacher_Student_Ratio': 40,
+        'School_Resources_Score': 0.5,
+        'School_Academic_Score': 0.5,
+        'Student_to_Resources_Ratio': 20,
+        'Field_Choice': 'Social',
+        'Father_Education': 'High School',
+        'Mother_Education': 'High School',
+        'Health_Issue': 'No Issue',
+        'Region': 'Oromia',
+        'School_Type': 'Public',
+        'Career_Interest': 'Teacher',
+        'Date_of_Birth': '2006-06-15',
+        'Textbook_Access': 'Yes',
+        'Overall_Avg_Attendance': 75,
+        'Overall_Avg_Homework': 65,
+        'Overall_Avg_Participation': 70
+    }
+    
+    # Load student data if available
+    if mode == "Select Existing Student" and st.session_state.df_original is not None:
+        df_original = st.session_state.df_original
+        student_options = df_original.head(100)[['Student_ID', 'Region']].copy()
+        student_options['Display'] = student_options['Student_ID'].astype(str) + " - " + student_options['Region']
+        selected_student_display = st.selectbox("Select Student", student_options['Display'].tolist(), key="sim_select_student")
+        
+        try:
+            selected_id = int(selected_student_display.split(" - ")[0])
+            student_data = df_original[df_original['Student_ID'] == selected_id].iloc[0].to_dict()
+            
+            # Update default values with actual student data
+            for key in default_values.keys():
+                if key in student_data and pd.notna(student_data[key]):
+                    default_values[key] = student_data[key]
+            
+            st.info(f"**Selected Student:** ID {selected_id} from {student_data.get('Region', 'N/A')}")
+        except Exception as e:
+            st.warning(f"Could not load student data: {e}. Using default values.")
+    
+    # Create columns for sliders
+    st.markdown("### Adjust Parameters")
+    
+    # Row 1: Demographic & Family
+    st.markdown("#### 👤 Demographic & Family Factors")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        gender = st.selectbox("Gender", ["Male", "Female"], index=0 if default_values['Gender'] == 'Male' else 1, key="sim_gender")
+    with col2:
+        age_str = default_values.get('Date_of_Birth', '2006-06-15')
+        try:
+            age = 2026 - int(str(age_str)[:4]) if isinstance(age_str, str) else 17
+        except:
+            age = 17
+        new_age = st.slider("Age", 15, 22, age, key="sim_age")
+    with col3:
+        region = st.selectbox("Region", [
+            'Addis Ababa', 'Oromia', 'Amhara', 'Tigray', 'SNNP', 'Somali', 
+            'Afar', 'Benishangul-Gumuz', 'Sidama', 'Gambela', 'Harari', 
+            'Dire Dawa', 'South West Ethiopia'
+        ], index=0 if default_values['Region'] == 'Addis Ababa' else 1, key="sim_region")
+    with col4:
+        field_choice = st.selectbox("Field Choice", ["Social", "Natural"], 
+                                    index=0 if default_values['Field_Choice'] == 'Social' else 1, key="sim_field")
+    
+    # Row 2: Family & Home
+    st.markdown("#### 🏠 Family & Home Environment")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        father_edu = st.selectbox("Father Education", ["Unknown", "Primary", "High School", "College", "University"],
+                                  index=2 if default_values['Father_Education'] == 'High School' else 1, key="sim_father")
+    with col2:
+        mother_edu = st.selectbox("Mother Education", ["Unknown", "Primary", "High School", "College", "University"],
+                                  index=2 if default_values['Mother_Education'] == 'High School' else 1, key="sim_mother")
+    with col3:
+        parental = st.slider("Parental Involvement", 0.0, 1.0, default_values['Parental_Involvement'], 0.05, key="sim_parental")
+    with col4:
+        internet = st.selectbox("Home Internet Access", ["Yes", "No"], 
+                                index=0 if default_values['Home_Internet_Access'] == 'Yes' else 1, key="sim_internet")
+    
+    # Row 3: Health & School Type
+    st.markdown("#### 🏥 Health & School Environment")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        health = st.selectbox("Health Issue", [
+            'No Issue', 'Dental Problems', 'Vision Issues', 'Hearing Issues',
+            'Anemia', 'Parasitic Infections', 'Respiratory Issues', 'Malnutrition',
+            'Physical Disability', 'Chronic Illness'
+        ], index=0, key="sim_health")
+    with col2:
+        electricity = st.selectbox("Electricity Access", ["Yes", "No"],
+                                   index=0 if default_values['Electricity_Access'] == 'Yes' else 1, key="sim_electricity")
+    with col3:
+        school_type = st.selectbox("School Type", ["Public", "Private", "NGO-operated", "Faith-based"],
+                                   index=0 if default_values['School_Type'] == 'Public' else 1, key="sim_school_type")
+    with col4:
+        school_location = st.selectbox("School Location", ["Urban", "Rural"],
+                                       index=0 if default_values['School_Location'] == 'Urban' else 1, key="sim_location")
+    
+    # Row 4: School Resources
+    st.markdown("#### 🏫 School Resources")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        school_resources = st.slider("School Resources Score", 0.0, 1.0, default_values['School_Resources_Score'], 0.05, key="sim_school_resources")
+    with col2:
+        school_academic = st.slider("School Academic Score", 0.0, 1.0, default_values['School_Academic_Score'], 0.05, key="sim_academic")
+    with col3:
+        teacher_ratio = st.slider("Teacher-Student Ratio", 10, 100, int(default_values['Teacher_Student_Ratio']), key="sim_teacher_ratio")
+    with col4:
+        student_resources_ratio = st.slider("Student-to-Resources Ratio", 5, 50, int(default_values['Student_to_Resources_Ratio']), key="sim_student_resources")
+    
+    # Row 5: Academic & Career
+    st.markdown("#### 📚 Academic & Career")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        career = st.selectbox("Career Interest", ["Teacher", "Doctor", "Engineer", "Farmer", "Business", "Government", "Unknown"],
+                              index=0 if default_values['Career_Interest'] == 'Teacher' else 1, key="sim_career")
+    with col2:
+        textbook = st.selectbox("Textbook Access", ["Yes", "No"],
+                                index=0 if default_values['Textbook_Access'] == 'Yes' else 1, key="sim_textbook")
+    with col3:
+        attendance = st.slider("Attendance (%)", 0, 100, int(default_values['Overall_Avg_Attendance']), key="sim_attendance")
+    with col4:
+        homework = st.slider("Homework Completion (%)", 0, 100, int(default_values['Overall_Avg_Homework']), key="sim_homework")
+    
+    # Row 6: Engagement
+    st.markdown("#### 💪 Student Engagement")
     col1, col2 = st.columns(2)
     with col1:
-        school_resources = st.slider("School Resources Score", 0.0, 1.0, 0.5, 0.05, key="sim_school_resources")
-        attendance = st.slider("Attendance (%)", 0, 100, 75, key="sim_attendance")
-        homework = st.slider("Homework (%)", 0, 100, 65, key="sim_homework")
+        participation = st.slider("Participation (%)", 0, 100, int(default_values['Overall_Avg_Participation']), key="sim_participation")
     with col2:
-        participation = st.slider("Participation (%)", 0, 100, 70, key="sim_participation")
-        textbook = st.slider("Textbook Access", 0.0, 1.0, 0.5, 0.05, key="sim_textbook")
-        teacher_ratio = st.slider("Teacher-Student Ratio", 10, 100, 40, key="sim_teacher_ratio")
+        st.markdown("")  # Placeholder
     
+    # Run simulation button
     if st.button("🚀 Run Simulation", type="primary", use_container_width=True, key="sim_button"):
-        # Calculate predicted score
-        engagement = (attendance * 0.4 + homework * 0.3 + participation * 0.3) / 100
-        predicted_score = (60.4 * school_resources + 17.9 * engagement + 7.25 * 0.5 + 
-                           7.14 * textbook + 2.87 * (attendance/100) + 2.02 * (teacher_ratio/100) +
-                           1.72 * (homework/100) + 0.85 * (participation/100)) * 0.8 + 20
-        predicted_score = max(0, min(100, predicted_score))
-        risk_prob = 1 / (1 + np.exp(-0.15 * (50 - predicted_score)))
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Predicted Score", f"{predicted_score:.1f}")
-            # Score gauge
-            fig = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=predicted_score,
-                title={'text': "Score"},
-                domain={'x': [0, 1], 'y': [0, 1]},
-                gauge={
-                    'axis': {'range': [0, 100]},
-                    'bar': {'color': '#2E86AB'},
-                    'steps': [
-                        {'range': [0, 50], 'color': '#C73E1D'},
-                        {'range': [50, 70], 'color': '#F18F01'},
-                        {'range': [70, 100], 'color': '#18A999'}
-                    ]
+        with st.spinner("Running simulation with trained models..."):
+            try:
+                # Calculate age from Date_of_Birth
+                import datetime
+                current_year = 2026
+                try:
+                    birth_year = int(str(default_values.get('Date_of_Birth', '2006-06-15'))[:4])
+                    age = current_year - birth_year
+                except:
+                    age = new_age
+                
+                # Prepare input data with ALL trained features
+                input_data = {
+                    'Gender': gender,
+                    'Parental_Involvement': parental,
+                    'Home_Internet_Access': internet,
+                    'Electricity_Access': electricity,
+                    'School_Location': school_location,
+                    'Teacher_Student_Ratio': teacher_ratio,
+                    'School_Resources_Score': school_resources,
+                    'School_Academic_Score': school_academic,
+                    'Student_to_Resources_Ratio': student_resources_ratio,
+                    'Field_Choice': field_choice,
+                    'Father_Education': father_edu,
+                    'Mother_Education': mother_edu,
+                    'Health_Issue': health,
+                    'Region': region,
+                    'School_Type': school_type,
+                    'Career_Interest': career,
+                    'Date_of_Birth': f"{current_year - age}-01-01",
+                    'Textbook_Access': textbook,
+                    'Overall_Avg_Attendance': attendance,
+                    'Overall_Avg_Homework': homework,
+                    'Overall_Avg_Participation': participation
                 }
-            ))
-            fig.update_layout(height=250)
-            st.plotly_chart(fig, use_container_width=True, key="sim_gauge")
-        
-        with col2:
-            st.metric("Risk Probability", f"{risk_prob*100:.1f}%")
-            st.progress(risk_prob)
-            st.markdown(f"**Status:** {'🔴 AT RISK' if risk_prob > 0.5 else '🟢 NOT AT RISK'}")
-        
-        # Recommendations
-        st.markdown("### 💡 Recommendations")
-        if risk_prob > 0.5:
-            st.error("🔴 **Immediate Intervention Required**")
-            if school_resources < 0.4:
-                st.markdown("• Increase school resources")
-            if attendance < 80:
-                st.markdown("• Improve attendance")
-            if homework < 60:
-                st.markdown("• Provide homework support")
-        else:
-            st.success("✅ **Student is on track**")
-            st.markdown("• Maintain current study habits")
-            st.markdown("• Consider enrichment activities")
-
+                
+                # Make predictions using trained models
+                predicted_score = prediction_engine.predict_score(input_data)
+                risk_prob = prediction_engine.predict_risk(input_data)
+                is_risk = risk_prob > 0.5
+                
+                # Calculate baseline prediction for comparison
+                baseline_input = input_data.copy()
+                baseline_input['School_Resources_Score'] = default_values['School_Resources_Score']
+                baseline_input['Overall_Avg_Attendance'] = default_values['Overall_Avg_Attendance']
+                baseline_input['Overall_Avg_Homework'] = default_values['Overall_Avg_Homework']
+                baseline_input['Overall_Avg_Participation'] = default_values['Overall_Avg_Participation']
+                baseline_input['Teacher_Student_Ratio'] = default_values['Teacher_Student_Ratio']
+                baseline_input['Parental_Involvement'] = default_values['Parental_Involvement']
+                
+                baseline_score = prediction_engine.predict_score(baseline_input)
+                baseline_risk = prediction_engine.predict_risk(baseline_input)
+                score_delta = predicted_score - baseline_score
+                risk_delta = risk_prob - baseline_risk
+                
+                # Display results
+                st.markdown("---")
+                st.markdown("## 📊 Simulation Results")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Predicted Score", f"{predicted_score:.1f}", 
+                             delta=f"{score_delta:+.1f}" if abs(score_delta) > 0.1 else None)
+                    
+                    # Score gauge
+                    fig = go.Figure(go.Indicator(
+                        mode="gauge+number",
+                        value=predicted_score,
+                        title={'text': "Overall Score"},
+                        domain={'x': [0, 1], 'y': [0, 1]},
+                        gauge={
+                            'axis': {'range': [0, 100]},
+                            'bar': {'color': '#2E86AB'},
+                            'steps': [
+                                {'range': [0, 50], 'color': '#C73E1D'},
+                                {'range': [50, 70], 'color': '#F18F01'},
+                                {'range': [70, 100], 'color': '#18A999'}
+                            ],
+                            'threshold': {'line': {'color': "black", 'width': 4}, 'thickness': 0.75, 'value': 50}
+                        }
+                    ))
+                    fig.update_layout(height=250)
+                    st.plotly_chart(fig, use_container_width=True, key="sim_score_gauge")
+                
+                with col2:
+                    st.metric("Risk Probability", f"{risk_prob*100:.1f}%",
+                             delta=f"{risk_delta*100:+.1f}%" if abs(risk_delta) > 0.01 else None,
+                             delta_color="inverse" if risk_delta < 0 else "normal")
+                    st.progress(risk_prob)
+                    st.metric("Risk Status", "🔴 AT RISK" if is_risk else "🟢 NOT AT RISK")
+                    
+                    # Risk gauge
+                    risk_fig = go.Figure(go.Indicator(
+                        mode="gauge+number",
+                        value=risk_prob * 100,
+                        title={'text': "Risk Probability (%)"},
+                        domain={'x': [0, 1], 'y': [0, 1]},
+                        gauge={
+                            'axis': {'range': [0, 100]},
+                            'bar': {'color': '#C73E1D' if risk_prob > 0.5 else '#18A999'},
+                            'steps': [
+                                {'range': [0, 30], 'color': '#18A999'},
+                                {'range': [30, 70], 'color': '#F18F01'},
+                                {'range': [70, 100], 'color': '#C73E1D'}
+                            ],
+                            'threshold': {'line': {'color': "black", 'width': 4}, 'thickness': 0.75, 'value': 50}
+                        }
+                    ))
+                    risk_fig.update_layout(height=250)
+                    st.plotly_chart(risk_fig, use_container_width=True, key="sim_risk_gauge")
+                
+                # Improvement Opportunities
+                st.markdown("### 📈 Improvement Opportunities")
+                
+                improvements = []
+                if school_resources < 0.9:
+                    improvements.append(("Increase School Resources by 0.2", 2.5))
+                if attendance < 95:
+                    improvements.append(("Improve Attendance by 10%", 1.8))
+                if homework < 95:
+                    improvements.append(("Improve Homework by 10%", 1.2))
+                if textbook == 'No':
+                    improvements.append(("Provide Textbook Access", 2.0))
+                if parental < 0.8:
+                    improvements.append(("Increase Parental Involvement by 0.2", 1.5))
+                if teacher_ratio > 35:
+                    improvements.append(("Reduce Teacher-Student Ratio by 5", 1.0))
+                if participation < 85:
+                    improvements.append(("Improve Participation by 10%", 0.8))
+                
+                if improvements:
+                    for action, impact in improvements[:5]:
+                        st.success(f"**{action}:** +{impact:.1f} points estimated improvement")
+                else:
+                    st.info("All parameters are already at optimal levels!")
+                
+                # Recommendations
+                st.markdown("### 💡 Recommendations")
+                recommendations = prediction_engine.get_recommendations(input_data, predicted_score, risk_prob)
+                for rec in recommendations:
+                    if rec.startswith("🔴"):
+                        st.error(rec)
+                    elif rec.startswith("✅"):
+                        st.success(rec)
+                    elif rec.startswith("•"):
+                        st.markdown(rec)
+                    else:
+                        st.info(rec)
+                
+                # Feature Impact Analysis
+                with st.expander("📊 Feature Impact Analysis"):
+                    st.markdown("""
+                    **How each factor affects performance:**
+                    
+                    | Factor | Impact | Recommendation |
+                    |--------|--------|----------------|
+                    | School Resources | **High** (55.1%) | Most important factor for success |
+                    | Student Engagement | **High** (17.9%) | Combined impact of attendance, homework, participation |
+                    | Attendance | Medium (6.9%) | Target 90%+ for optimal results |
+                    | Homework | Medium (4.4%) | Consistent completion is key |
+                    | Teacher-Student Ratio | Medium (2.0%) | Lower ratios (30-35:1) are best |
+                    | Parental Involvement | Low (1.1%) | Significant for at-risk students |
+                    """)
+                    
+                    # Show current vs optimal values
+                    st.markdown("**Current vs Optimal Values:**")
+                    opt_data = {
+                        'Factor': ['School Resources', 'Attendance', 'Homework', 'Participation', 'Teacher Ratio'],
+                        'Current': [f"{school_resources:.2f}", f"{attendance}%", f"{homework}%", f"{participation}%", f"{teacher_ratio}:1"],
+                        'Optimal': ['0.80+', '90%+', '85%+', '80%+', '35:1 or less'],
+                        'Status': [
+                            '✅ Good' if school_resources >= 0.7 else '⚠️ Needs Improvement',
+                            '✅ Good' if attendance >= 85 else '⚠️ Needs Improvement',
+                            '✅ Good' if homework >= 75 else '⚠️ Needs Improvement',
+                            '✅ Good' if participation >= 70 else '⚠️ Needs Improvement',
+                            '✅ Good' if teacher_ratio <= 40 else '⚠️ Needs Improvement'
+                        ]
+                    }
+                    st.dataframe(pd.DataFrame(opt_data), use_container_width=True, hide_index=True)
+                
+                # Model Information
+                with st.expander("📊 Model Information"):
+                    st.markdown("""
+                    **Trained Models Used:**
+                    - **Regression Model:** Gradient Boosting (R² = 0.7855)
+                    - **Classification Model:** Gradient Boosting (AUC = 0.918)
+                    
+                    **Features Used in Training:**
+                    - **Demographic:** Gender, Age, Region, Field Choice
+                    - **Family:** Parental Involvement, Father/Mother Education, Home Internet, Electricity
+                    - **School:** Resources Score, Academic Score, Teacher Ratio, School Type, Location
+                    - **Health:** Health Issue status and severity
+                    - **Academic:** Attendance, Homework, Participation, Textbook Access
+                    - **Engagement:** PCA-combined Engagement Score
+                    
+                    **Preprocessing Applied:**
+                    - Binary encoding for Yes/No features
+                    - Ordinal encoding for education levels
+                    - K-Fold target encoding for high-cardinality features
+                    - PCA for engagement score
+                    - Standard scaling for numerical features
+                    """)
+                    
+            except Exception as e:
+                st.error(f"Simulation error: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
+                
 # ============================================================================
 # PAGE: REPORTS (with Student Clustering)
 # ============================================================================
