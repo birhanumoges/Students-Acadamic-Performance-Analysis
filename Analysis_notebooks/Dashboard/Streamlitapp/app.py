@@ -783,7 +783,7 @@ elif selected_page == "📊 Analytics":
         # ====================================================================
         
         # Define columns to exclude
-        exclude_columns = ['Student_ID']
+        exclude_columns = ['Student_ID','Total_Test_Score']
         
         # Add all grade level columns
         for i in range(1, 13):
@@ -825,7 +825,7 @@ elif selected_page == "📊 Analytics":
             textfont={"size": 10}
         ))
         fig.update_layout(
-            title="Feature Correlation Heatmap (Excluding Student_ID and Grade Levels)",
+            title="Feature Correlation Heatmap",
             xaxis_title="Features",
             yaxis_title="Features",
             height=600,
@@ -1011,7 +1011,10 @@ elif selected_page == "📊 Analytics":
         )
         st.plotly_chart(fig, use_container_width=True, key="model_roc_curve")
     
-    with tab3:
+        st.markdown("---")
+        
+        # Regression metrics
+        st.markdown("#### Regression Model (Gradient Boosting)")
         st.markdown("### National Exam Score Model Analysis")
         st.markdown('<div class="info-box">', unsafe_allow_html=True)
         st.markdown("""
