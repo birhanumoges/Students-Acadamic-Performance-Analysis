@@ -155,10 +155,85 @@ if 'data_processor' not in st.session_state:
 if 'config' not in st.session_state:
     st.session_state.config = None
 
-# Create sample data if not exists
+# ============================================================================
+# UPDATED DATA LOADING FUNCTION WITH ALL REQUIRED COLUMNS
+# ============================================================================
+
 @st.cache_data
-def create_sample_data():
-    """Create sample data for demonstration"""
+def load_original_data():
+    """
+    Load the original Ethiopian student dataset from file.
+    If file not found, creates sample data for demonstration.
+    """
+    # Define possible file paths to check
+    possible_paths = [
+        r"C:/Users/DELL/Documents/project_data/ethiopian_students_dataset.csv",
+        r"C:/Users/DELL/Downloads/ethiopian_students_dataset.csv",
+        os.path.join(os.path.dirname(__file__), "data", "ethiopian_students_dataset.csv"),
+        os.path.join(os.path.dirname(__file__), "..", "data", "ethiopian_students_dataset.csv"),
+    ]
+    
+    # Try to load from each path
+    df_original = None
+    loaded_path = None
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            try:
+                df_original = pd.read_csv(path)
+                loaded_path = path
+                print(f"✅ Data loaded successfully from: {path}")
+                break
+            except Exception as e:
+                print(f"⚠️ Error reading {path}: {e}")
+                continue
+    
+    # If file found, load and preprocess
+    if df_original is not None:
+        # Ensure Student_ID is numeric
+        if 'Student_ID' in df_original.columns:
+            try:
+                df_original['Student_ID'] = pd.to_numeric(df_original['Student_ID'], errors='coerce')
+                df_original['Student_ID'] = df_original['Student_ID'].fillna(range(1, len(df_original) + 1)).astype(int)
+            except:
+                df_original['Student_ID'] = range(1, len(df_original) + 1)
+        else:
+            df_original['Student_ID'] = range(1, len(df_original) + 1)
+        
+        # Add Age column if missing
+        if 'Age' not in df_original.columns:
+            df_original['Age'] = np.random.randint(15, 22, len(df_original))
+        
+        # Add missing required columns with default values
+        required_columns = {
+            'Overall_Engagement_Score': lambda x: (x.get('Overall_Avg_Attendance', 75) * 0.4 + 
+                                                    x.get('Overall_Avg_Homework', 65) * 0.3 + 
+                                                    x.get('Overall_Avg_Participation', 70) * 0.3),
+            'Overall_Textbook_Access_Composite': 0.5,
+            'Overall_Avg_Attendance': 75,
+            'Overall_Avg_Homework': 65,
+            'Overall_Avg_Participation': 70,
+            'School_Resources_Score': 0.5,
+            'School_Academic_Score': 0.5,
+            'Teacher_Student_Ratio': 40,
+            'Parental_Involvement': 0.5
+        }
+        
+        for col, default_value in required_columns.items():
+            if col not in df_original.columns:
+                if callable(default_value):
+                    df_original[col] = df_original.apply(default_value, axis=1)
+                else:
+                    df_original[col] = default_value
+        
+        st.success(f"✅ Data loaded from: {loaded_path}")
+        st.info(f"Dataset shape: {df_original.shape[0]:,} rows × {df_original.shape[1]} columns")
+        
+        return df_original
+    
+    # If no file found, create comprehensive sample data
+    st.warning("Original dataset not found. Creating sample data for demonstration.")
+    
     np.random.seed(42)
     n = 10000
     
@@ -166,92 +241,42 @@ def create_sample_data():
                'Afar', 'Benishangul-Gumuz', 'Sidama', 'Gambela', 'Harari', 
                'Dire Dawa', 'South West Ethiopia']
     
-    df = pd.DataFrame({
+    # Create DataFrame with ALL required columns
+    df_sample = pd.DataFrame({
         'Student_ID': range(1, n+1),
         'Overall_Average': np.random.normal(60, 15, n).clip(0, 100),
         'Region': np.random.choice(regions, n),
         'Gender': np.random.choice(['Male', 'Female'], n),
+        'Age': np.random.randint(15, 22, n),
         'School_Resources_Score': np.random.uniform(0.2, 0.9, n),
+        'School_Academic_Score': np.random.uniform(0.3, 0.9, n),
         'Parental_Involvement': np.random.uniform(0.1, 0.9, n),
         'Overall_Avg_Attendance': np.random.uniform(50, 100, n),
         'Overall_Avg_Homework': np.random.uniform(40, 100, n),
         'Overall_Avg_Participation': np.random.uniform(40, 100, n),
         'Overall_Textbook_Access_Composite': np.random.uniform(0.2, 0.9, n),
         'Teacher_Student_Ratio': np.random.uniform(20, 60, n),
-        'School_Academic_Score': np.random.uniform(0.3, 0.9, n),
-        'Age': np.random.randint(15, 22, n),
         'Health_Issue': np.random.choice(['No Issue', 'Minor', 'Moderate', 'Severe'], n, p=[0.6, 0.2, 0.15, 0.05]),
         'Home_Internet_Access': np.random.choice(['Yes', 'No'], n),
         'Electricity_Access': np.random.choice(['Yes', 'No'], n),
         'School_Location': np.random.choice(['Urban', 'Rural'], n),
-        'Field_Choice': np.random.choice(['Social', 'Natural'], n)
+        'Field_Choice': np.random.choice(['Social', 'Natural'], n),
+        'Career_Interest': np.random.choice(['Teacher', 'Doctor', 'Engineer', 'Farmer', 'Business'], n),
+        'Father_Education': np.random.choice(['Unknown', 'Primary', 'High School', 'College', 'University'], n),
+        'Mother_Education': np.random.choice(['Unknown', 'Primary', 'High School', 'College', 'University'], n),
+        'School_Type': np.random.choice(['Public', 'Private', 'NGO-operated'], n)
     })
     
-    return df
-
-# Load data
-if st.session_state.df_original is None:
-    with st.spinner("Loading data..."):
-        st.session_state.df_original = create_sample_data()
-        st.session_state.df_processed = st.session_state.df_original.copy()
-        
-        # Create regression models dict
-        st.session_state.regression_models = {
-            'XGBoost': {'R2': 0.7855, 'MAE': 2.98, 'RMSE': 3.72},
-            'GradientBoosting': {'R2': 0.7851, 'MAE': 2.99, 'RMSE': 3.73},
-            'RandomForest': {'R2': 0.7719, 'MAE': 3.07, 'RMSE': 3.84},
-            'LinearRegression': {'R2': 0.7690, 'MAE': 3.10, 'RMSE': 3.86}
-        }
-        
-        # Classification model
-        st.session_state.classification_model = {
-            'f1': 0.7782,
-            'roc_auc': 0.9178,
-            'cm': np.array([[54123, 9389], [5274, 31214]]),
-            'feature_importance': {
-                'School_Resources_Score': 0.5505,
-                'Overall_Engagement_Score': 0.1789,
-                'Overall_Avg_Attendance': 0.0690,
-                'Overall_Avg_Homework': 0.0443,
-                'Age': 0.0296
-            }
-        }
-        
-        # Clustering analysis
-        st.session_state.clustering_analysis = {
-            'silhouette_score': 0.1742,
-            'cluster_sizes': {'Low': 39380, 'Medium': 38933, 'High': 21687},
-            'cluster_profile': pd.DataFrame({
-                'Overall_Average': [47.31, 54.28, 62.56],
-                'Overall_Engagement_Score': [68.03, 78.30, 73.04],
-                'School_Resources_Score': [0.42, 0.45, 0.70],
-                'Teacher_Student_Ratio': [49.96, 50.05, 34.50],
-                'Overall_Textbook_Access_Composite': [0.36, 0.38, 0.63],
-                'Parental_Involvement': [0.30, 0.48, 0.37]
-            }, index=['Low', 'Medium', 'High']),
-            'regional_risk': {
-                'Somali': 47.4, 'Benishangul-Gumuz': 45.54, 'Afar': 45.27,
-                'Tigray': 44.76, 'Sidama': 43.24, 'Gambela': 42.24,
-                'SNNP': 40.57, 'Oromia': 39.21, 'Amhara': 39.18,
-                'South West Ethiopia': 39.18, 'Dire Dawa': 31.37,
-                'Harari': 28.72, 'Addis Ababa': 21.32
-            }
-        }
-        
-        # Create simple prediction engine
-        class SimplePredictionEngine:
-            def predict_score(self, df):
-                return 70.0
-            def predict_risk(self, df):
-                return 0.5
-            def get_recommendations(self, data, score, risk):
-                return ["No recommendations available"]
-        
-        st.session_state.prediction_engine = SimplePredictionEngine()
-        st.session_state.data_processor = SimplePredictionEngine()
-        st.session_state.config = {'risk_threshold': 0.5, 'required_features': []}
-        
-        st.success("✅ Data loaded successfully!")
+    # Calculate Overall_Engagement_Score
+    df_sample['Overall_Engagement_Score'] = (
+        df_sample['Overall_Avg_Attendance'] * 0.4 +
+        df_sample['Overall_Avg_Homework'] * 0.3 +
+        df_sample['Overall_Avg_Participation'] * 0.3
+    )
+    
+    st.info(f"Sample data created: {n:,} students with all required features")
+    
+    return df_sample
 
 # Sidebar Navigation
 with st.sidebar:
