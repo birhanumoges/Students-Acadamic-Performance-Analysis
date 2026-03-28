@@ -595,10 +595,10 @@ elif selected_page == "👥 Students":
             key="students_table"
         )
         
-        # Profile Panel
+        # Profile Panel - Updated with proper handling of missing columns
         st.markdown("---")
         st.markdown("### 👤 Student Profile")
-        
+
         if selected_idx.selection.rows:
             selected_student = filtered_df.iloc[selected_idx.selection.rows[0]]
             
@@ -612,11 +612,21 @@ elif selected_page == "👥 Students":
                 st.markdown(f"**Student ID:** {selected_student.get('Student_ID', 'N/A')}")
                 st.markdown(f"**Region:** {selected_student.get('Region', 'N/A')}")
                 st.markdown(f"**Gender:** {selected_student.get('Gender', 'N/A')}")
-                st.markdown(f"**Age:** {selected_student.get('Age', 'N/A')}")
+                # Handle Age - provide default if missing
+                age_value = selected_student.get('Age', 'N/A')
+                if pd.isna(age_value) or age_value == 'N/A':
+                    age_display = "N/A"
+                else:
+                    age_display = f"{int(age_value)}" if isinstance(age_value, (int, float)) else str(age_value)
+                st.markdown(f"**Age:** {age_display}")
                 st.markdown(f"**Field Choice:** {selected_student.get('Field_Choice', 'N/A')}")
             
             with col2:
-                st.markdown(f"**Actual Score:** {selected_student.get('Overall_Average', 'N/A'):.1f}" if 'Overall_Average' in selected_student else "N/A")
+                actual_score = selected_student.get('Overall_Average', 'N/A')
+                if actual_score != 'N/A' and not pd.isna(actual_score):
+                    st.markdown(f"**Actual Score:** {actual_score:.1f}")
+                else:
+                    st.markdown(f"**Actual Score:** N/A")
                 st.markdown(f"**Predicted Score:** {predicted_score:.1f}")
                 st.markdown(f"**Risk Probability:** {risk_prob*100:.1f}%")
                 st.progress(risk_prob)
@@ -635,10 +645,17 @@ elif selected_page == "👥 Students":
                 st.markdown(f"• Risk Probability: {risk_prob*100:.1f}%")
                 st.markdown("• Maintain current study habits")
             
+            # Check for missing features and provide recommendations
             if selected_student.get('School_Resources_Score', 0.5) < 0.4:
-                st.warning("• Request additional learning materials")
+                st.warning("• Request additional learning materials (Low School Resources)")
             if selected_student.get('Overall_Avg_Attendance', 75) < 80:
-                st.warning("• Implement attendance improvement program")
+                st.warning("• Implement attendance improvement program (Low Attendance)")
+            if selected_student.get('Overall_Avg_Homework', 65) < 60:
+                st.warning("• Provide homework support and tutoring (Low Homework Completion)")
+            if selected_student.get('Overall_Avg_Participation', 70) < 65:
+                st.warning("• Encourage class participation (Low Participation)")
+            if selected_student.get('Parental_Involvement', 0.5) < 0.3:
+                st.warning("• Organize parent engagement workshop (Low Parental Involvement)")
         else:
             st.info("👆 Select a student from the table to view detailed profile")
 
