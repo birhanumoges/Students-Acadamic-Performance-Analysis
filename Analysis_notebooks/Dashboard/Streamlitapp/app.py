@@ -288,7 +288,193 @@ def load_original_data():
     )
     
     return df_sample, None
+# ============================================================================
+# CACHED CLUSTERING DATA FUNCTION
+# ============================================================================
 
+@st.cache_data
+def get_clustering_data():
+    """Cached function to load clustering data - runs only once"""
+    # Cluster mapping
+    cluster_mapping = {2: 'High', 1: 'Medium', 0: 'Low'}
+    
+    # Cluster sizes
+    cluster_sizes = {'Low': 39380, 'Medium': 38933, 'High': 21687}
+    
+    # Cluster profiles
+    cluster_profile_data = {
+        'Performance_Cluster': ['Low', 'Medium', 'High'],
+        'Total_National_Exam_Score': [286.685256, 331.849464, 334.484428],
+        'Overall_Average': [47.309911, 54.283330, 62.559605],
+        'Overall_Avg_Attendance': [85.879107, 87.396578, 86.733333],
+        'Overall_Avg_Homework': [52.551327, 73.066655, 62.319139],
+        'Overall_Avg_Participation': [59.697917, 71.411008, 65.515959],
+        'Overall_Engagement_Score': [68.026416, 78.301930, 73.043863],
+        'School_Academic_Score': [0.424432, 0.445902, 0.695637],
+        'Teacher_Student_Ratio': [49.957881, 50.049940, 34.502018],
+        'Student_to_Resources_Ratio': [22.629008, 22.578901, 15.891499],
+        'Parental_Involvement': [0.301593, 0.484578, 0.365762],
+        'Overall_Textbook_Access_Composite': [0.361508, 0.375552, 0.630930]
+    }
+    
+    cluster_profile = pd.DataFrame(cluster_profile_data).set_index('Performance_Cluster')
+    
+    # Regional risk data
+    regional_risk = {
+        'Somali': 47.398699, 'Benishangul-Gumuz': 45.542895, 'Afar': 45.271891,
+        'Tigray': 44.758569, 'Sidama': 43.237808, 'Gambela': 42.241869,
+        'SNNP': 40.569923, 'Oromia': 39.208222, 'Amhara': 39.180777,
+        'South West Ethiopia': 39.175258, 'Dire Dawa': 31.365403,
+        'Harari': 28.723770, 'Addis Ababa': 21.323982
+    }
+    
+    # Regional cluster distribution
+    regional_cluster_data = {
+        'Addis Ababa': {'Low': 0.21, 'Medium': 0.60, 'High': 0.19},
+        'Afar': {'Low': 0.45, 'Medium': 0.33, 'High': 0.22},
+        'Amhara': {'Low': 0.39, 'Medium': 0.38, 'High': 0.23},
+        'Benishangul-Gumuz': {'Low': 0.46, 'Medium': 0.32, 'High': 0.23},
+        'Dire Dawa': {'Low': 0.31, 'Medium': 0.48, 'High': 0.21},
+        'Gambela': {'Low': 0.42, 'Medium': 0.36, 'High': 0.22},
+        'Harari': {'Low': 0.29, 'Medium': 0.50, 'High': 0.21},
+        'Oromia': {'Low': 0.39, 'Medium': 0.39, 'High': 0.22},
+        'SNNP': {'Low': 0.41, 'Medium': 0.37, 'High': 0.22},
+        'Sidama': {'Low': 0.43, 'Medium': 0.34, 'High': 0.23},
+        'Somali': {'Low': 0.47, 'Medium': 0.30, 'High': 0.23},
+        'South West Ethiopia': {'Low': 0.39, 'Medium': 0.39, 'High': 0.22},
+        'Tigray': {'Low': 0.45, 'Medium': 0.34, 'High': 0.22}
+    }
+    
+    regional_cluster_df = pd.DataFrame(regional_cluster_data).T
+    
+    return {
+        'cluster_sizes': cluster_sizes,
+        'cluster_profile': cluster_profile,
+        'regional_risk': regional_risk,
+        'regional_cluster_df': regional_cluster_df,
+        'silhouette_score': 0.1742
+    }
+
+
+# ============================================================================
+# CACHED VISUALIZATION FUNCTIONS
+# ============================================================================
+
+@st.cache_data
+def create_cluster_bar_chart(cluster_sizes):
+    """Create cluster distribution bar chart - cached"""
+    fig = go.Figure(data=[
+        go.Bar(
+            x=list(cluster_sizes.keys()),
+            y=list(cluster_sizes.values()),
+            marker_color=['#18A999', '#F18F01', '#C73E1D'],
+            text=list(cluster_sizes.values()),
+            textposition='auto',
+            textfont=dict(size=14)
+        )
+    ])
+    fig.update_layout(
+        title="Student Performance Cluster Distribution",
+        xaxis_title="Performance Level",
+        yaxis_title="Number of Students",
+        height=400,
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+    return fig
+
+
+@st.cache_data
+def create_regional_heatmap(regional_cluster_df):
+    """Create regional heatmap - cached"""
+    fig = go.Figure(data=go.Heatmap(
+        z=regional_cluster_df.values,
+        x=regional_cluster_df.columns,
+        y=regional_cluster_df.index,
+        colorscale='RdYlGn_r',
+        text=regional_cluster_df.values.round(2),
+        texttemplate='%{text:.2f}',
+        textfont={"size": 11},
+        hoverongaps=False,
+        colorbar=dict(title="Proportion")
+    ))
+    fig.update_layout(
+        title="Regional Cluster Distribution Heatmap",
+        xaxis_title="Performance Cluster",
+        yaxis_title="Region",
+        height=500,
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+    return fig
+
+
+@st.cache_data
+def create_regional_barchart(regional_cluster_df):
+    """Create regional stacked bar chart - cached"""
+    fig = go.Figure()
+    cluster_colors = {'Low': '#C73E1D', 'Medium': '#F18F01', 'High': '#18A999'}
+    
+    for cluster in ['Low', 'Medium', 'High']:
+        if cluster in regional_cluster_df.columns:
+            fig.add_trace(go.Bar(
+                name=cluster,
+                x=regional_cluster_df.index,
+                y=regional_cluster_df[cluster],
+                marker_color=cluster_colors[cluster],
+                text=regional_cluster_df[cluster].round(2),
+                textposition='inside',
+                textfont=dict(size=10)
+            ))
+    
+    fig.update_layout(
+        title="Regional Cluster Distribution (Stacked)",
+        xaxis_title="Region",
+        yaxis_title="Proportion of Students",
+        barmode='stack',
+        height=500,
+        xaxis_tickangle=-45,
+        legend=dict(
+            title="Performance Level",
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+    return fig
+
+
+@st.cache_data
+def create_regional_risk_chart(regional_risk):
+    """Create regional risk chart - cached"""
+    risk_df = pd.DataFrame(list(regional_risk.items()), columns=['Region', 'Risk %'])
+    risk_df = risk_df.sort_values('Risk %', ascending=True)
+    
+    fig = go.Figure(data=[
+        go.Bar(
+            x=risk_df['Risk %'],
+            y=risk_df['Region'],
+            orientation='h',
+            marker_color='#C73E1D',
+            text=[f'{v:.1f}%' for v in risk_df['Risk %']],
+            textposition='auto',
+            textfont=dict(size=11)
+        )
+    ])
+    fig.update_layout(
+        title="Regional Risk Analysis (% Low Performance Students)",
+        xaxis_title="% Low Performance",
+        yaxis_title="Region",
+        height=550,
+        margin=dict(l=150),
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+    return fig
 
 # ============================================================================
 # LOAD DATA AND INITIALIZE MODELS
@@ -773,7 +959,7 @@ elif selected_page == "📊 Analytics":
     df = st.session_state.df_processed
     
     # Create tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["📈 Diagnostics", "🤖 Modeling", "📊 National Exam", "💡 Explainability"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📈 Diagnostics", "🤖 Modeling", "📊 student clustering", "💡 Explainability"])
     
     with tab1:
         st.markdown("### Diagnostic Analysis")
@@ -931,7 +1117,7 @@ elif selected_page == "📊 Analytics":
         st.markdown("### Model Performance")
         
         # Regression metrics
-        st.markdown("#### Regression Model (XGBoost)")
+        st.markdown("#### Overall Average Score Analysis - Regression Model (XGBoost)")
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("R² Score", "0.7855")
@@ -1092,7 +1278,123 @@ elif selected_page == "📊 Analytics":
         4. The model shows good fit with Durbin-Watson statistic of 2.00 (independent residuals)
         """)
         st.markdown('</div>', unsafe_allow_html=True)
-    
+    with tab3:
+        # Show loading spinner only for this tab
+        with st.spinner("Loading clustering visualizations..."):
+            # Load cached clustering data
+            clustering_data = get_clustering_data()
+            
+            cluster_sizes = clustering_data['cluster_sizes']
+            cluster_profile = clustering_data['cluster_profile']
+            regional_risk = clustering_data['regional_risk']
+            regional_cluster_df = clustering_data['regional_cluster_df']
+            silhouette_score = clustering_data['silhouette_score']
+        
+        st.markdown("### 📊 Student Clustering Analysis")
+        st.markdown("Grouping students based on academic performance patterns")
+        st.markdown("---")
+        
+        # Cluster distribution
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Use cached chart
+            fig = create_cluster_bar_chart(cluster_sizes)
+            st.plotly_chart(fig, use_container_width=True, key="cluster_distribution")
+        
+        with col2:
+            st.markdown("**Cluster Analysis**")
+            st.markdown(f"**Silhouette Score:** {silhouette_score:.4f}")
+            st.markdown("**Cluster to Label Mapping:**")
+            st.markdown("- Cluster 0 → Low Performers")
+            st.markdown("- Cluster 1 → Medium Performers")
+            st.markdown("- Cluster 2 → High Performers")
+            st.markdown("---")
+            st.markdown("**Cluster Sizes:**")
+            st.markdown(f"- **High Performers:** {cluster_sizes.get('High', 0):,} students")
+            st.markdown(f"- **Medium Performers:** {cluster_sizes.get('Medium', 0):,} students")
+            st.markdown(f"- **Low Performers:** {cluster_sizes.get('Low', 0):,} students")
+            st.markdown("---")
+            st.markdown("**Three distinct student groups identified:**")
+            st.markdown("- High Performers: Top academic achievement")
+            st.markdown("- Medium Performers: Average performance")
+            st.markdown("- Low Performers: Require intervention")
+        
+        # Complete Cluster Profile Table
+        st.markdown("### 📋 Complete Cluster Profile Table")
+        st.dataframe(cluster_profile.round(2), use_container_width=True)
+        
+        # Regional Cluster Distribution
+        st.markdown("### 🗺️ Regional Cluster Distribution")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Use cached heatmap
+            fig = create_regional_heatmap(regional_cluster_df)
+            st.plotly_chart(fig, use_container_width=True, key="regional_heatmap")
+        
+        with col2:
+            # Use cached bar chart
+            fig = create_regional_barchart(regional_cluster_df)
+            st.plotly_chart(fig, use_container_width=True, key="regional_barchart")
+        
+        # Regional Risk Analysis
+        st.markdown("### ⚠️ Regional Risk Analysis (% Low Performance)")
+        fig = create_regional_risk_chart(regional_risk)
+        st.plotly_chart(fig, use_container_width=True, key="regional_risk")
+        
+        # Key Cluster Insights
+        st.markdown("### 💡 Key Cluster Insights")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("**🏆 High Performers**")
+            st.markdown(f"- Highest Overall Average: {cluster_profile.loc['High', 'Overall_Average']:.1f}")
+            st.markdown(f"- Best National Exam Scores: {cluster_profile.loc['High', 'Total_National_Exam_Score']:.1f}")
+            st.markdown(f"- Best Textbook Access: {cluster_profile.loc['High', 'Overall_Textbook_Access_Composite']:.2f}")
+            st.markdown(f"- Best School Resources: {cluster_profile.loc['High', 'School_Academic_Score']:.2f}")
+            st.markdown(f"- Lowest Teacher-Student Ratio: {cluster_profile.loc['High', 'Teacher_Student_Ratio']:.1f}:1")
+        
+        with col2:
+            st.markdown("**⭐ Medium Performers**")
+            st.markdown(f"- Medium Overall Average: {cluster_profile.loc['Medium', 'Overall_Average']:.1f}")
+            st.markdown(f"- Good National Exam Scores: {cluster_profile.loc['Medium', 'Total_National_Exam_Score']:.1f}")
+            st.markdown(f"- Highest Engagement Score: {cluster_profile.loc['Medium', 'Overall_Engagement_Score']:.1f}")
+            st.markdown(f"- Highest Homework Completion: {cluster_profile.loc['Medium', 'Overall_Avg_Homework']:.1f}")
+            st.markdown(f"- Highest Parental Involvement: {cluster_profile.loc['Medium', 'Parental_Involvement']:.2f}")
+        
+        with col3:
+            st.markdown("**⚠️ Low Performers**")
+            st.markdown(f"- Lowest Overall Average: {cluster_profile.loc['Low', 'Overall_Average']:.1f}")
+            st.markdown(f"- Lowest National Exam Scores: {cluster_profile.loc['Low', 'Total_National_Exam_Score']:.1f}")
+            st.markdown(f"- Lowest Textbook Access: {cluster_profile.loc['Low', 'Overall_Textbook_Access_Composite']:.2f}")
+            st.markdown(f"- Lowest Homework Completion: {cluster_profile.loc['Low', 'Overall_Avg_Homework']:.1f}")
+            st.markdown(f"- Lowest Parental Involvement: {cluster_profile.loc['Low', 'Parental_Involvement']:.2f}")
+        
+        # Cluster-Specific Recommendations
+        st.markdown("### 🎯 Cluster-Specific Recommendations")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("**🏆 High Performers**")
+            st.markdown("- Enrichment programs for advanced learning")
+            st.markdown("- Leadership and mentorship opportunities")
+            st.markdown("- College readiness programs")
+        
+        with col2:
+            st.markdown("**⭐ Medium Performers**")
+            st.markdown("- Targeted academic support")
+            st.markdown("- Study skills workshops")
+            st.markdown("- Career guidance sessions")
+        
+        with col3:
+            st.markdown("**⚠️ Low Performers**")
+            st.markdown("- Immediate academic intervention")
+            st.markdown("- Small group tutoring")
+            st.markdown("- Parent engagement programs")
     with tab4:
         st.markdown("### Model Explainability with SHAP")
         st.markdown('<div class="info-box">', unsafe_allow_html=True)
