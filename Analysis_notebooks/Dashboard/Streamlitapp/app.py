@@ -696,26 +696,31 @@ elif selected_page == "📊 Analytics":
         )
         st.plotly_chart(fig, use_container_width=True, key="diag_corr_heatmap")
         
-        # Scatter plots
+        # Scatter plots with column existence checks
         col1, col2 = st.columns(2)
+        
         with col1:
             st.markdown("#### Attendance vs Score")
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=df['Overall_Avg_Attendance'],
-                y=df['Overall_Average'],
-                mode='markers',
-                marker=dict(color='#2E86AB', size=6, opacity=0.6)
-            ))
-            fig.update_layout(
-                xaxis_title="Attendance (%)",
-                yaxis_title="Overall Score",
-                height=400
-            )
-            st.plotly_chart(fig, use_container_width=True, key="diag_scatter_attendance")
+            if 'Overall_Avg_Attendance' in df.columns and 'Overall_Average' in df.columns:
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=df['Overall_Avg_Attendance'],
+                    y=df['Overall_Average'],
+                    mode='markers',
+                    marker=dict(color='#2E86AB', size=6, opacity=0.6)
+                ))
+                fig.update_layout(
+                    xaxis_title="Attendance (%)",
+                    yaxis_title="Overall Score",
+                    height=400
+                )
+                st.plotly_chart(fig, use_container_width=True, key="diag_scatter_attendance")
+            else:
+                st.warning("Attendance data not available")
         
-        with col2:
-            st.markdown("#### Resources Score vs Score")
+    with col2:
+        st.markdown("#### Resources Score vs Score")
+        if 'School_Resources_Score' in df.columns and 'Overall_Average' in df.columns:
             fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=df['School_Resources_Score'],
@@ -729,7 +734,8 @@ elif selected_page == "📊 Analytics":
                 height=400
             )
             st.plotly_chart(fig, use_container_width=True, key="diag_scatter_resources")
-    
+        else:
+            st.warning("School Resources data not available")
     with tab2:
         st.markdown("### Model Performance")
         
