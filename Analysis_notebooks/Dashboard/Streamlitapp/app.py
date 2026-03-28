@@ -530,28 +530,28 @@ if selected_page == "📈 Overview":
         )
         st.plotly_chart(fig, use_container_width=True, key="overview_gender_bar")
     
-    # Correlation Heatmap
-    st.subheader("Feature Correlation Analysis")
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    corr_data = df[numeric_cols[:15]].corr()
-    fig = go.Figure(data=go.Heatmap(
-        z=corr_data.values,
-        x=corr_data.columns,
-        y=corr_data.index,
-        colorscale='RdBu',
-        zmid=0,
-        text=np.round(corr_data.values, 2),
-        texttemplate='%{text}',
-        textfont={"size": 10}
-    ))
-    fig.update_layout(
-        title="Feature Correlation Heatmap",
-        xaxis_title="Features",
-        yaxis_title="Features",
-        height=600,
-        xaxis_tickangle=-45
-    )
-    st.plotly_chart(fig, use_container_width=True, key="overview_corr_heatmap")
+    # # Correlation Heatmap
+    # st.subheader("Feature Correlation Analysis")
+    # numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    # corr_data = df[numeric_cols[:15]].corr()
+    # fig = go.Figure(data=go.Heatmap(
+    #     z=corr_data.values,
+    #     x=corr_data.columns,
+    #     y=corr_data.index,
+    #     colorscale='RdBu',
+    #     zmid=0,
+    #     text=np.round(corr_data.values, 2),
+    #     texttemplate='%{text}',
+    #     textfont={"size": 10}
+    # ))
+    # fig.update_layout(
+    #     title="Feature Correlation Heatmap",
+    #     xaxis_title="Features",
+    #     yaxis_title="Features",
+    #     height=600,
+    #     xaxis_tickangle=-45
+    # )
+    # st.plotly_chart(fig, use_container_width=True, key="overview_corr_heatmap")
     
     # Summary Table
     st.subheader("Quick Summary Statistics")
