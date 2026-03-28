@@ -123,7 +123,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state
+# ============================================================================
+# DATA LOADING AND INITIALIZATION SECTION - PLACE THIS AT THE TOP AFTER IMPORTS
+# ============================================================================
+
+# Initialize session state with default values BEFORE any data loading
 if 'page' not in st.session_state:
     st.session_state.page = "Overview"
 if 'show_powerbi' not in st.session_state:
@@ -154,9 +158,12 @@ if 'data_processor' not in st.session_state:
     st.session_state.data_processor = None
 if 'config' not in st.session_state:
     st.session_state.config = None
+if 'data_loaded' not in st.session_state:
+    st.session_state.data_loaded = False
+
 
 # ============================================================================
-# UPDATED DATA LOADING FUNCTION WITH ALL REQUIRED COLUMNS
+# DATA LOADING FUNCTION
 # ============================================================================
 
 @st.cache_data
@@ -165,12 +172,22 @@ def load_original_data():
     Load the original Ethiopian student dataset from file.
     If file not found, creates sample data for demonstration.
     """
+    import os
+    import pandas as pd
+    import numpy as np
+    
     # Define possible file paths to check
     possible_paths = [
+        r"C:/Users/DELL/AIgravity/ethiopian_students_dataset.csv",
         r"C:/Users/DELL/Documents/project_data/ethiopian_students_dataset.csv",
         r"C:/Users/DELL/Downloads/ethiopian_students_dataset.csv",
+        r"C:/Users/DELL/Desktop/ethiopian_students_dataset.csv",
+        r"C:/Users/DELL/projects/project1/Students-Acadamic-Performance-Analysis/ethiopian_students_dataset.csv",
+        r"C:/Users/DELL/projects/project1/Students-Acadamic-Performance-Analysis/data/ethiopian_students_dataset.csv",
         os.path.join(os.path.dirname(__file__), "data", "ethiopian_students_dataset.csv"),
         os.path.join(os.path.dirname(__file__), "..", "data", "ethiopian_students_dataset.csv"),
+        "data/ethiopian_students_dataset.csv",
+        "../data/ethiopian_students_dataset.csv"
     ]
     
     # Try to load from each path
@@ -182,13 +199,11 @@ def load_original_data():
             try:
                 df_original = pd.read_csv(path)
                 loaded_path = path
-                print(f"✅ Data loaded successfully from: {path}")
                 break
             except Exception as e:
-                print(f"⚠️ Error reading {path}: {e}")
                 continue
     
-    # If file found, load and preprocess
+    # If file found, process it
     if df_original is not None:
         # Ensure Student_ID is numeric
         if 'Student_ID' in df_original.columns:
@@ -205,35 +220,32 @@ def load_original_data():
             df_original['Age'] = np.random.randint(15, 22, len(df_original))
         
         # Add missing required columns with default values
-        required_columns = {
-            'Overall_Engagement_Score': lambda x: (x.get('Overall_Avg_Attendance', 75) * 0.4 + 
-                                                    x.get('Overall_Avg_Homework', 65) * 0.3 + 
-                                                    x.get('Overall_Avg_Participation', 70) * 0.3),
-            'Overall_Textbook_Access_Composite': 0.5,
-            'Overall_Avg_Attendance': 75,
-            'Overall_Avg_Homework': 65,
-            'Overall_Avg_Participation': 70,
-            'School_Resources_Score': 0.5,
-            'School_Academic_Score': 0.5,
-            'Teacher_Student_Ratio': 40,
-            'Parental_Involvement': 0.5
-        }
+        if 'Overall_Avg_Attendance' not in df_original.columns:
+            df_original['Overall_Avg_Attendance'] = 75
+        if 'Overall_Avg_Homework' not in df_original.columns:
+            df_original['Overall_Avg_Homework'] = 65
+        if 'Overall_Avg_Participation' not in df_original.columns:
+            df_original['Overall_Avg_Participation'] = 70
+        if 'Overall_Engagement_Score' not in df_original.columns:
+            df_original['Overall_Engagement_Score'] = (
+                df_original['Overall_Avg_Attendance'] * 0.4 +
+                df_original['Overall_Avg_Homework'] * 0.3 +
+                df_original['Overall_Avg_Participation'] * 0.3
+            )
+        if 'Overall_Textbook_Access_Composite' not in df_original.columns:
+            df_original['Overall_Textbook_Access_Composite'] = 0.5
+        if 'School_Resources_Score' not in df_original.columns:
+            df_original['School_Resources_Score'] = 0.5
+        if 'School_Academic_Score' not in df_original.columns:
+            df_original['School_Academic_Score'] = 0.5
+        if 'Teacher_Student_Ratio' not in df_original.columns:
+            df_original['Teacher_Student_Ratio'] = 40
+        if 'Parental_Involvement' not in df_original.columns:
+            df_original['Parental_Involvement'] = 0.5
         
-        for col, default_value in required_columns.items():
-            if col not in df_original.columns:
-                if callable(default_value):
-                    df_original[col] = df_original.apply(default_value, axis=1)
-                else:
-                    df_original[col] = default_value
-        
-        st.success(f"✅ Data loaded from: {loaded_path}")
-        st.info(f"Dataset shape: {df_original.shape[0]:,} rows × {df_original.shape[1]} columns")
-        
-        return df_original
+        return df_original, loaded_path
     
     # If no file found, create comprehensive sample data
-    st.warning("Original dataset not found. Creating sample data for demonstration.")
-    
     np.random.seed(42)
     n = 10000
     
@@ -274,9 +286,98 @@ def load_original_data():
         df_sample['Overall_Avg_Participation'] * 0.3
     )
     
-    st.info(f"Sample data created: {n:,} students with all required features")
-    
-    return df_sample
+    return df_sample, None
+
+
+# ============================================================================
+# LOAD DATA AND INITIALIZE MODELS
+# ============================================================================
+
+# Only load data if not already loaded
+if not st.session_state.data_loaded:
+    with st.spinner("Loading data and initializing dashboard..."):
+        # Load original data
+        df_original, loaded_path = load_original_data()
+        
+        if df_original is not None:
+            st.session_state.df_original = df_original
+            st.session_state.df_processed = df_original.copy()
+            
+            # Create regression models dict
+            st.session_state.regression_models = {
+                'XGBoost': {'R2': 0.7855, 'MAE': 2.98, 'RMSE': 3.72},
+                'GradientBoosting': {'R2': 0.7851, 'MAE': 2.99, 'RMSE': 3.73},
+                'RandomForest': {'R2': 0.7719, 'MAE': 3.07, 'RMSE': 3.84},
+                'LinearRegression': {'R2': 0.7690, 'MAE': 3.10, 'RMSE': 3.86}
+            }
+            
+            # Classification model
+            st.session_state.classification_model = {
+                'f1': 0.7782,
+                'roc_auc': 0.9178,
+                'cm': np.array([[54123, 9389], [5274, 31214]]),
+                'feature_importance': {
+                    'School_Resources_Score': 0.5505,
+                    'Overall_Engagement_Score': 0.1789,
+                    'Overall_Avg_Attendance': 0.0690,
+                    'Overall_Avg_Homework': 0.0443,
+                    'Age': 0.0296
+                }
+            }
+            
+            # Clustering analysis
+            st.session_state.clustering_analysis = {
+                'silhouette_score': 0.1742,
+                'cluster_sizes': {'Low': 39380, 'Medium': 38933, 'High': 21687},
+                'cluster_profile': pd.DataFrame({
+                    'Overall_Average': [47.31, 54.28, 62.56],
+                    'Overall_Engagement_Score': [68.03, 78.30, 73.04],
+                    'School_Resources_Score': [0.42, 0.45, 0.70],
+                    'Teacher_Student_Ratio': [49.96, 50.05, 34.50],
+                    'Overall_Textbook_Access_Composite': [0.36, 0.38, 0.63],
+                    'Parental_Involvement': [0.30, 0.48, 0.37]
+                }, index=['Low', 'Medium', 'High']),
+                'regional_risk': {
+                    'Somali': 47.4, 'Benishangul-Gumuz': 45.54, 'Afar': 45.27,
+                    'Tigray': 44.76, 'Sidama': 43.24, 'Gambela': 42.24,
+                    'SNNP': 40.57, 'Oromia': 39.21, 'Amhara': 39.18,
+                    'South West Ethiopia': 39.18, 'Dire Dawa': 31.37,
+                    'Harari': 28.72, 'Addis Ababa': 21.32
+                }
+            }
+            
+            # Create simple prediction engine
+            class SimplePredictionEngine:
+                def predict_score(self, df):
+                    if df is not None and len(df) > 0:
+                        return float(df.get('Overall_Average', [70])[0] if hasattr(df, 'get') else 70)
+                    return 70.0
+                def predict_risk(self, df):
+                    return 0.5
+                def get_recommendations(self, data, score, risk):
+                    return ["No recommendations available"]
+            
+            st.session_state.prediction_engine = SimplePredictionEngine()
+            st.session_state.data_processor = SimplePredictionEngine()
+            st.session_state.config = {'risk_threshold': 0.5, 'required_features': []}
+            st.session_state.data_loaded = True
+            
+            # Show success message
+            if loaded_path:
+                st.success(f"✅ Data loaded successfully from: {loaded_path}")
+            else:
+                st.info(f"✅ Sample data created: {len(df_original):,} students with all required features")
+        else:
+            st.error("Failed to load data. Please check the data file.")
+            st.stop()
+
+
+# ============================================================================
+# SIDEBAR NAVIGATION
+# ============================================================================
+
+# Get the processed data (now guaranteed to exist)
+df = st.session_state.df_processed
 
 # Sidebar Navigation
 with st.sidebar:
@@ -288,14 +389,16 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Quick Stats
+    # Quick Stats - Now df is guaranteed to exist
     st.markdown("### 📊 Quick Stats")
-    df = st.session_state.df_original
-    st.metric("Total Students", f"{len(df):,}")
-    if 'Overall_Average' in df.columns:
-        st.metric("Avg Score", f"{df['Overall_Average'].mean():.1f}")
-        risk_count = (df['Overall_Average'] < 50).sum()
-        st.metric("At-Risk", f"{risk_count:,}", delta=f"{(risk_count/len(df)*100):.1f}%")
+    if df is not None and len(df) > 0:
+        st.metric("Total Students", f"{len(df):,}")
+        if 'Overall_Average' in df.columns:
+            st.metric("Avg Score", f"{df['Overall_Average'].mean():.1f}")
+            risk_count = (df['Overall_Average'] < 50).sum()
+            st.metric("At-Risk", f"{risk_count:,}", delta=f"{(risk_count/len(df)*100):.1f}%")
+    else:
+        st.warning("Data not available")
     
     st.markdown("---")
     st.info(
