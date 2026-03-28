@@ -1,5 +1,5 @@
 {
-    "model_name": "Gradient Boosting",
+    "model_name": "XGBoost",
     "feature_order": [
         "Gender",
         "Parental_Involvement",
@@ -55,6 +55,6 @@
         "Overall_Engagement_Score"
     ],
     "categorical_features": [],
-    "target": "your_target_column",
+    "target": "Overall_Average",
     "version": "v1"
 }
