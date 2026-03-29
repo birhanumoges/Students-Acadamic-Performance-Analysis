@@ -1958,6 +1958,17 @@ elif selected_page == "📋 Reports":
     df = st.session_state.df_original.copy()
     prediction_engine = st.session_state.prediction_engine
     
+    # In Reports page, check for pre-selected report
+    if st.session_state.get('pre_selected_report') == "National Exam Report":
+        report_type = "National Exam Report"
+        # Clear the pre-selection after use
+        st.session_state.pre_selected_report = None
+    else:
+        report_type = st.selectbox(
+            "Select Report Type",
+            ["Predictions Report", "About Student Report", "National Exam Report", "Summary Statistics", "Full Dataset"],
+            key="report_type_widget"
+        )
     # Report type selection
     report_type = st.selectbox(
         "Select Report Type",
