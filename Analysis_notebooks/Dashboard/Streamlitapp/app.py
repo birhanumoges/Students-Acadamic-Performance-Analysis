@@ -859,50 +859,22 @@ if selected_page == "📈 Overview":
     # See More Button for Power BI
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("🔍 See More Detailed Analysis", use_container_width=True, key="see_more_powerbi"):
+        if st.button("🔍 Explore Interactive Power BI Dashboard", use_container_width=True, key="see_more_powerbi"):
             st.session_state.show_powerbi = not st.session_state.show_powerbi
-    
+
     if st.session_state.show_powerbi:
         st.markdown("---")
-        st.subheader("📊 Detailed Power BI Dashboard View")
-        st.markdown('<div class="info-box">', unsafe_allow_html=True)
-        st.markdown("""
-        **Interactive Power BI Dashboard Features:**
+        st.subheader("📊 Interactive Power BI Dashboard")
         
-        **1. Student Performance Overview**
-        - Drill-down by region, gender, and school type
-        - Time-series analysis of performance trends
-        - Comparative analysis between schools
+        # Simple one-line description to attract users
+        st.info("📈 **Interactive Power BI Dashboard - Student performance, risk analysis & resource optimization**")
         
-        **2. Risk Analysis Dashboard**
-        - Risk heatmap by region
-        - Risk factor correlation matrix
-        - Early warning system alerts
-        
-        **3. Resource Allocation Analysis**
-        - School resources vs performance scatter plot
-        - Textbook access impact analysis
-        - Teacher-student ratio optimization
-        
-        **4. Predictive Analytics**
-        - Student performance predictions
-        - Risk probability forecasts
-        - Intervention impact simulation
-        
-        **5. Export & Sharing**
-        - Export to Excel/PDF
-        - Scheduled reports
-        - Email alerts for high-risk students
-        """)
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Embed Power BI (replace with your actual Power BI embed URL)
+        # Power BI Embed
         powerbi_embed_url = "https://app.powerbi.com/view?r=your_embed_url_here"
         st.markdown(f"""
-        <iframe width="100%" height="600" src="{powerbi_embed_url}" frameborder="0" allowFullScreen="true"></iframe>
+        <iframe width="100%" height="550" src="{powerbi_embed_url}" frameborder="0" allowFullScreen="true" style="border-radius: 10px;"></iframe>
         """, unsafe_allow_html=True)
-        st.caption("Note: Replace with your actual Power BI embed URL for live dashboard")
-
+        st.caption("📌 **Note:** Replace with your actual Power BI embed URL for live interactive dashboard")
 # ============================================================================
 # PAGE: STUDENTS (with filters on right side) - USING TRAINED MODELS
 # ============================================================================
