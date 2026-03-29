@@ -1348,7 +1348,7 @@ elif selected_page == "📊 Analytics":
         st.markdown('</div>', unsafe_allow_html=True)
         # ============================================================================
         # QUICK NAVIGATION BUTTON TO REPORTS PAGE
-        # ============================================================================
+    # ============================================================================
 
         # Add this button in your Analytics page
         if st.button("📊 View National Exam Report", type="primary"):
@@ -2203,15 +2203,24 @@ elif selected_page == "📋 Reports":
     df = st.session_state.df_original.copy()
     prediction_engine = st.session_state.prediction_engine
     
-    # Report type selection
-    report_type = st.selectbox(
-        "Select Report Type",
-        ["Predictions Report", "About Student Report", "National Exam Report", "Summary Statistics", "Full Dataset"],
-        key="report_type_widget"
-    )
+    # ========================================================================
+    # CHECK FOR PRE-SELECTED REPORT FROM NAVIGATION
+    # ========================================================================
+    if st.session_state.get('pre_selected_report'):
+        report_type = st.session_state.pre_selected_report
+        # Clear after use to prevent re-selection on refresh
+        st.session_state.pre_selected_report = None
+        st.info(f"📊 **Showing:** {report_type} (click 'Generate Report' below)")
+    else:
+        report_type = st.selectbox(
+            "Select Report Type",
+            ["Predictions Report", "About Student Report", "National Exam Report", "Summary Statistics", "Full Dataset"],
+            key="report_type_widget"
+        )
     
+    # Generate report button
     if st.button("📊 Generate Report", type="primary", use_container_width=True, key="report_button_widget"):
-        with st.spinner("Generating report..."):
+        with st.spinner(f"Generating {report_type}..."):
             
             # ========================================================================
             # PREDICTIONS REPORT (Using Trained Models)
@@ -2222,7 +2231,7 @@ elif selected_page == "📋 Reports":
                 st.markdown("---")
                 
                 # Generate predictions using trained models
-                report_df = df.head(500).copy()
+                report_df = df.head(100).copy()
                 predictions = []
                 risks = []
                 
