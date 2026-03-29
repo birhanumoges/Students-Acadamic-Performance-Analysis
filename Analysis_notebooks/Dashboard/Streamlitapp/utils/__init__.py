@@ -1,3 +1,4 @@
+# utils/__init__.py
 """
 Utils package for Ethiopian Student Performance Dashboard
 """
@@ -37,7 +38,10 @@ from .visualizations import (
     create_shap_global_plot_classification,
     create_regional_cluster_heatmap,
     create_regional_cluster_barchart,
-    create_recommendations_summary_table
+    create_recommendations_summary_table,
+    create_scatter_plot,
+    create_risk_gauge,
+    create_boxplot
 )
 
 from .predictions import (
