@@ -856,13 +856,24 @@ if selected_page == "📈 Overview":
     }
     st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
     
-    # See More Button for Power BI
     st.markdown("---")
-    st.info("📈 **Drill down into student performance, risk heatmaps, and resource optimization analytics**")
+
+    # Styled "See More" section
+    st.markdown("""
+        <div style="background-color: #1E40AF; padding: 18px; border-radius: 10px; text-align: center; margin-bottom: 10px;">
+            <h3 style="color: white; margin: 0 0 8px 0;">📈 Visualize Detailed Student Performance Insights</h3>
+            <p style="color: #E0F2FE; margin: 0;">Interactive analysis with charts and trends</p>
+            <div style="margin-top: 10px;">
+                <strong style="color: white;">👇 Click the button below to explore the interactive Power BI Dashboard</strong>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("🔍 Explore Interactive Power BI Dashboard", use_container_width=True, key="see_more_powerbi"):
+        if st.button("🔍 Explore Interactive Power BI Dashboard", 
+                    use_container_width=True, 
+                    key="see_more_powerbi"):
             st.session_state.show_powerbi = not st.session_state.show_powerbi
 
     if st.session_state.show_powerbi:
@@ -870,10 +881,10 @@ if selected_page == "📈 Overview":
         st.markdown("### 📊 Interactive Power BI Dashboard")
         st.caption("Visualize student performance, risk analysis, and resource allocation insights")
         
-        # Power BI Embed
         powerbi_embed_url = "https://app.powerbi.com/view?r=your_embed_url_here"
         st.components.v1.iframe(powerbi_embed_url, height=550, scrolling=True)
-        st.caption("📌 **Note:** Replace with your actual Power BI embed URL for live interactive dashboard")
+        
+        st.caption("📌 Note: Replace with your actual Power BI embed URL")
 # ============================================================================
 # PAGE: STUDENTS (with filters on right side) - USING TRAINED MODELS
 # ============================================================================
@@ -2412,35 +2423,36 @@ elif selected_page == "📋 Reports":
                 )
                 st.plotly_chart(fig, use_container_width=True, key="student_distribution_chart")
                 
-                # Regional Distribution Analysis
+                # Regional Distribution by Student Count
                 st.markdown("#### Regional Distribution Analysis")
-                st.markdown("*Breakdown of students by region with average scores*")
-                
-                region_stats = df.groupby('Region').agg({
-                    'Student_ID': 'count',
-                    'Overall_Average': 'mean'
-                }).round(2)
-                region_stats.columns = ['Total Students', 'Average Score']
-                region_stats = region_stats.sort_values('Total Students', ascending=False)
-                st.dataframe(region_stats, use_container_width=True, key="regional_distribution")
-                
-                # Regional performance visualization
-                fig2 = go.Figure()
-                fig2.add_trace(go.Bar(
-                    x=region_stats.index,
-                    y=region_stats['Average Score'],
+                st.markdown("*Number of students by region*")
+
+                # Count students per region
+                region_count = df.groupby('Region')['Student_ID'].count().reset_index()
+                region_count.columns = ['Region', 'Total Students']
+                region_count = region_count.sort_values('Total Students', ascending=False)
+
+                st.dataframe(region_count, use_container_width=True, hide_index=True)
+
+                # Bar Chart
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=region_count['Region'],
+                    y=region_count['Total Students'],
                     marker_color='#2E86AB',
-                    text=region_stats['Average Score'].round(1),
+                    text=region_count['Total Students'],
                     textposition='auto'
                 ))
-                fig2.update_layout(
-                    title="Average Score by Region",
+
+                fig.update_layout(
+                    title="Number of Students by Region",
                     xaxis_title="Region",
-                    yaxis_title="Average Score",
+                    yaxis_title="Total Students",
                     height=450,
                     xaxis_tickangle=-45
                 )
-                st.plotly_chart(fig2, use_container_width=True, key="regional_score_chart")
+
+                st.plotly_chart(fig, use_container_width=True)
                 
                 # Recommendations about student level
                 st.markdown("#### Recommendations about Student Level")
