@@ -1337,7 +1337,8 @@ elif selected_page == "📊 Analytics":
         
         The National Exam Score model predicts student performance on Ethiopian national examinations 
         using historical academic data and demographic factors. This model is specifically designed 
-        to forecast scores on critical national exams including:
+        to class level or group predition of national exams scores, rather than individual student predictions,
+         due to the nature of the available data and the focus on regional and school-level insights.:
         
         - **Social Science Track**: History, Geography, Economics, Math (Social)
         - **Natural Science Track**: Biology, Chemistry, Physics, Math (Natural)
