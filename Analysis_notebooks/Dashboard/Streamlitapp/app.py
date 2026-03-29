@@ -288,6 +288,66 @@ def load_original_data():
     )
     
     return df_sample, None
+
+# ============================================================================
+# LOAD DATA AND INITIALIZE MODELS
+# ============================================================================
+
+# Only load data if not already loaded
+if not st.session_state.data_loaded:
+    with st.spinner("Loading data and initializing dashboard..."):
+        # Load original data
+        df_original, loaded_path = load_original_data()
+        
+        if df_original is not None:
+            # Import the real PredictionEngine and DataProcessor
+            try:
+                from utils.predictions import PredictionEngine
+                from utils.data_processor import DataProcessor
+                
+                # Initialize data processor
+                data_processor = DataProcessor()
+                
+                # Initialize prediction engine with models
+                prediction_engine = PredictionEngine()
+                
+                # Store in session state
+                st.session_state.df_original = df_original
+                st.session_state.df_processed = data_processor.load_and_preprocess_data(df_original.copy())
+                st.session_state.data_processor = data_processor
+                st.session_state.prediction_engine = prediction_engine
+                st.session_state.config = {'risk_threshold': 0.5, 'required_features': []}
+                st.session_state.risk_threshold = 0.5
+                st.session_state.data_loaded = True
+                
+                # Show success message
+                if loaded_path:
+                    st.success(f"✅ Data loaded successfully from: {loaded_path}")
+                else:
+                    st.info(f"✅ Sample data created: {len(df_original):,} students")
+                
+                # Check and display model status
+                if prediction_engine.is_models_loaded():
+                    st.success("✅ Models loaded successfully!")
+                    status = prediction_engine.get_model_status()
+                    st.info(f"📊 Models: {status.get('regression_type', 'Unknown')} (Regression) & {status.get('classification_type', 'Unknown')} (Classification)")
+                    st.info(f"📋 Features: {status.get('features_count', 0)} features loaded")
+                else:
+                    st.warning("⚠️ Models not loaded. Prediction features will use fallback calculations.")
+                    if prediction_engine.load_error:
+                        st.error(f"Error: {prediction_engine.load_error}")
+                    st.info("📁 Model files should be in: " + str(prediction_engine.model_dir))
+                    
+            except ImportError as e:
+                st.error(f"❌ Import error: {e}")
+                st.info("Please ensure utils/predictions.py and utils/data_processor.py exist")
+                st.stop()
+            except Exception as e:
+                st.error(f"❌ Initialization error: {e}")
+                st.stop()
+        else:
+            st.error("Failed to load data. Please check the data file.")
+            st.stop()
 # ============================================================================
 # CACHED CLUSTERING DATA FUNCTION
 # ============================================================================
