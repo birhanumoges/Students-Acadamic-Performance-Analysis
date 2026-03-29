@@ -800,13 +800,16 @@ if selected_page == "📈 Overview":
         st.caption("Note: Replace with your actual Power BI embed URL for live dashboard")
 
 # ============================================================================
-# PAGE: STUDENTS (with filters on right side)
+# PAGE: STUDENTS (with filters on right side) - USING TRAINED MODELS
 # ============================================================================
 elif selected_page == "👥 Students":
     st.markdown("<h1 class='main-header'>👥 Student Management</h1>", unsafe_allow_html=True)
     st.markdown("<p class='sub-header'>Search, filter, and analyze individual student performance</p>", unsafe_allow_html=True)
     
+    # Get data and prediction engine from session state
     df = st.session_state.df_original.copy()
+    prediction_engine = st.session_state.prediction_engine
+    data_processor = st.session_state.data_processor
     
     # Create two columns: main content (left) and filters (right)
     col_main, col_filters = st.columns([3, 1])
@@ -833,10 +836,6 @@ elif selected_page == "👥 Students":
         
         # Reset filters button
         if st.button("🔄 Reset Filters", use_container_width=True, key="reset_filters_widget"):
-            filter_region = "All"
-            filter_gender = "All"
-            filter_risk = "All"
-            attendance_range = (0, 100)
             st.rerun()
         
         st.markdown('</div>', unsafe_allow_html=True)
@@ -885,24 +884,70 @@ elif selected_page == "👥 Students":
             key="students_table"
         )
         
-        # Profile Panel - Updated with proper handling of missing columns
+        # Profile Panel - Using Trained Models
         st.markdown("---")
         st.markdown("### 👤 Student Profile")
 
         if selected_idx.selection.rows:
             selected_student = filtered_df.iloc[selected_idx.selection.rows[0]]
             
-            # Simulate prediction
-            predicted_score = selected_student.get('Overall_Average', 50) * 0.95 + np.random.randn() * 3
-            predicted_score = max(0, min(100, predicted_score))
-            risk_prob = 1 / (1 + np.exp(-0.15 * (50 - predicted_score)))
+            # Prepare student data for prediction
+            student_data = selected_student.to_dict()
             
+            # Check if prediction engine exists and has models loaded
+            models_loaded = False
+            if prediction_engine is not None:
+                # Check if the engine has the is_models_loaded method
+                if hasattr(prediction_engine, 'is_models_loaded'):
+                    models_loaded = prediction_engine.is_models_loaded()
+                # If it has models_loaded attribute directly
+                elif hasattr(prediction_engine, 'models_loaded'):
+                    models_loaded = prediction_engine.models_loaded
+            
+            if models_loaded:
+                try:
+                    # Make predictions using trained models
+                    predicted_score = prediction_engine.predict_score(student_data)
+                    risk_prob = prediction_engine.predict_risk(student_data)
+                    
+                    # Get recommendations
+                    recommendations = prediction_engine.get_recommendations(student_data, predicted_score, risk_prob)
+                    
+                except Exception as e:
+                    st.error(f"Prediction error: {str(e)}")
+                    predicted_score = selected_student.get('Overall_Average', 50)
+                    risk_prob = 0.5
+                    recommendations = ["Unable to generate recommendations due to prediction error"]
+            else:
+                # Show model loading status
+                st.warning("⚠️ Models not loaded. Using fallback calculations.")
+                
+                # Fallback calculation
+                engagement = (selected_student.get('Overall_Avg_Attendance', 75) * 0.4 +
+                             selected_student.get('Overall_Avg_Homework', 65) * 0.3 +
+                             selected_student.get('Overall_Avg_Participation', 70) * 0.3) / 100
+                predicted_score = (60.4 * selected_student.get('School_Resources_Score', 0.5) +
+                                  17.9 * engagement +
+                                  7.14 * selected_student.get('Overall_Textbook_Access_Composite', 0.5) +
+                                  2.87 * selected_student.get('Overall_Avg_Attendance', 75)/100 +
+                                  2.02 * selected_student.get('Teacher_Student_Ratio', 40)/100 +
+                                  1.72 * selected_student.get('Overall_Avg_Homework', 65)/100 +
+                                  0.85 * selected_student.get('Overall_Avg_Participation', 70)/100) * 0.8 + 20
+                predicted_score = max(0, min(100, predicted_score))
+                risk_prob = 1 / (1 + np.exp(-0.15 * (50 - predicted_score)))
+                recommendations = [
+                    "⚠️ Models not loaded - using fallback calculations",
+                    "Please ensure model files exist in the models folder"
+                ]
+            
+            is_risk = risk_prob > st.session_state.risk_threshold
+            
+            # Display student information
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown(f"**Student ID:** {selected_student.get('Student_ID', 'N/A')}")
                 st.markdown(f"**Region:** {selected_student.get('Region', 'N/A')}")
                 st.markdown(f"**Gender:** {selected_student.get('Gender', 'N/A')}")
-                # Handle Age - provide default if missing
                 age_value = selected_student.get('Age', 'N/A')
                 if pd.isna(age_value) or age_value == 'N/A':
                     age_display = "N/A"
@@ -910,6 +955,7 @@ elif selected_page == "👥 Students":
                     age_display = f"{int(age_value)}" if isinstance(age_value, (int, float)) else str(age_value)
                 st.markdown(f"**Age:** {age_display}")
                 st.markdown(f"**Field Choice:** {selected_student.get('Field_Choice', 'N/A')}")
+                st.markdown(f"**School Type:** {selected_student.get('School_Type', 'N/A')}")
             
             with col2:
                 actual_score = selected_student.get('Overall_Average', 'N/A')
@@ -917,38 +963,71 @@ elif selected_page == "👥 Students":
                     st.markdown(f"**Actual Score:** {actual_score:.1f}")
                 else:
                     st.markdown(f"**Actual Score:** N/A")
+                
+                # Display prediction metrics
                 st.markdown(f"**Predicted Score:** {predicted_score:.1f}")
+                
+                # Show prediction error if actual score available
+                if actual_score != 'N/A' and not pd.isna(actual_score):
+                    error = abs(predicted_score - actual_score)
+                    st.markdown(f"**Prediction Error:** ±{error:.1f} points")
+                
                 st.markdown(f"**Risk Probability:** {risk_prob*100:.1f}%")
                 st.progress(risk_prob)
-                st.markdown(f"**Risk Status:** {'🔴 AT RISK' if risk_prob > 0.5 else '🟢 NOT AT RISK'}")
+                
+                # Risk status with color
+                if is_risk:
+                    st.markdown(f"**Risk Status:** 🔴 **AT RISK**")
+                else:
+                    st.markdown(f"**Risk Status:** 🟢 **NOT AT RISK**")
             
-            # Recommendations
+            # Display recommendations
             st.markdown("### 💡 Recommendations")
-            if risk_prob > 0.5:
-                st.error("🔴 **Immediate Intervention Required**")
-                st.markdown("• Schedule academic counseling session")
-                st.markdown("• Implement personalized learning plan")
-                st.markdown("• Increase parent-teacher communication")
-            else:
-                st.success("✅ **Student is Performing Well**")
-                st.markdown(f"• Predicted Score: {predicted_score:.1f}")
-                st.markdown(f"• Risk Probability: {risk_prob*100:.1f}%")
-                st.markdown("• Maintain current study habits")
+            for rec in recommendations:
+                if rec.startswith("🔴"):
+                    st.error(rec)
+                elif rec.startswith("✅"):
+                    st.success(rec)
+                elif rec.startswith("⚠️"):
+                    st.warning(rec)
+                elif rec.startswith("•"):
+                    st.markdown(rec)
+                else:
+                    st.info(rec)
             
-            # Check for missing features and provide recommendations
-            if selected_student.get('School_Resources_Score', 0.5) < 0.4:
-                st.warning("• Request additional learning materials (Low School Resources)")
-            if selected_student.get('Overall_Avg_Attendance', 75) < 80:
-                st.warning("• Implement attendance improvement program (Low Attendance)")
-            if selected_student.get('Overall_Avg_Homework', 65) < 60:
-                st.warning("• Provide homework support and tutoring (Low Homework Completion)")
-            if selected_student.get('Overall_Avg_Participation', 70) < 65:
-                st.warning("• Encourage class participation (Low Participation)")
-            if selected_student.get('Parental_Involvement', 0.5) < 0.3:
-                st.warning("• Organize parent engagement workshop (Low Parental Involvement)")
+            # Show model status info if models not loaded
+            if not models_loaded:
+                with st.expander("📊 Model Status Information"):
+                    st.markdown("""
+                    **Required Model Files:**
+                    - `gradient_boosting_model_full.pkl` (Regression model)
+                    - `student_risk_classifier.pkl` (Classification model)
+                    - `metadata_classification_v1.json` (Feature metadata)
+                    
+                    **Model Directory Path:** `Streamlitapp/models/`
+                    
+                    **To fix this issue:**
+                    1. Place the model files in the `models` folder
+                    2. Restart the application
+                    """)
+            
+            # Additional student details in expander
+            with st.expander("📋 Additional Student Details"):
+                additional_cols = ['School_Resources_Score', 'School_Academic_Score', 
+                                  'Teacher_Student_Ratio', 'Parental_Involvement', 
+                                  'Overall_Textbook_Access_Composite', 'Health_Issue',
+                                  'Home_Internet_Access', 'Electricity_Access']
+                
+                for col in additional_cols:
+                    if col in selected_student:
+                        value = selected_student[col]
+                        if isinstance(value, float):
+                            st.markdown(f"**{col}:** {value:.2f}")
+                        else:
+                            st.markdown(f"**{col}:** {value}")
+            
         else:
-            st.info("👆 Select a student from the table to view detailed profile")
-
+            st.info("👆 Select a student from the table to view detailed profile and predictions")
 # ============================================================================
 # PAGE: ANALYTICS (with National Exam concept, confusion matrix, and explainability)
 # ============================================================================
