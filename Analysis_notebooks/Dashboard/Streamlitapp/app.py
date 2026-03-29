@@ -777,29 +777,6 @@ if selected_page == "📈 Overview":
         )
         st.plotly_chart(fig, use_container_width=True, key="overview_gender_bar")
     
-    # # Correlation Heatmap
-    # st.subheader("Feature Correlation Analysis")
-    # numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    # corr_data = df[numeric_cols[:15]].corr()
-    # fig = go.Figure(data=go.Heatmap(
-    #     z=corr_data.values,
-    #     x=corr_data.columns,
-    #     y=corr_data.index,
-    #     colorscale='RdBu',
-    #     zmid=0,
-    #     text=np.round(corr_data.values, 2),
-    #     texttemplate='%{text}',
-    #     textfont={"size": 10}
-    # ))
-    # fig.update_layout(
-    #     title="Feature Correlation Heatmap",
-    #     xaxis_title="Features",
-    #     yaxis_title="Features",
-    #     height=600,
-    #     xaxis_tickangle=-45
-    # )
-    # st.plotly_chart(fig, use_container_width=True, key="overview_corr_heatmap")
-    
     # Summary Table
     st.subheader("Quick Summary Statistics")
     summary_data = {
@@ -2024,164 +2001,373 @@ elif selected_page == "🎯 Simulation" and st.session_state.data_loaded:
                 st.code(traceback.format_exc())
                 
 # ============================================================================
-# PAGE: REPORTS (with Student Clustering)
+# PAGE: REPORTS (with Student Clustering based on Overall_Average)
 # ============================================================================
 elif selected_page == "📋 Reports":
     st.markdown("<h1 class='main-header'>📋 Reports & Export</h1>", unsafe_allow_html=True)
     st.markdown("<p class='sub-header'>Generate and download comprehensive reports including predictions, clusters, and summary statistics</p>", unsafe_allow_html=True)
     
     df = st.session_state.df_original.copy()
+    prediction_engine = st.session_state.prediction_engine
     
     # Report type selection
     report_type = st.selectbox(
         "Select Report Type",
-        ["Predictions Report", "Student Clustering Report", "Summary Statistics", "Full Dataset"],
+        ["Predictions Report", "About Student Report", "National Exam Report", "Summary Statistics", "Full Dataset"],
         key="report_type_widget"
     )
     
     if st.button("📊 Generate Report", type="primary", use_container_width=True, key="report_button_widget"):
         with st.spinner("Generating report..."):
+            
+            # ========================================================================
+            # PREDICTIONS REPORT (Using Trained Models)
+            # ========================================================================
             if report_type == "Predictions Report":
                 st.markdown("### Student Predictions Report")
+                st.markdown("*This report uses trained ML models to predict student performance and risk levels*")
+                st.markdown("---")
                 
-                # Generate predictions
+                # Generate predictions using trained models
                 report_df = df.head(500).copy()
                 predictions = []
                 risks = []
-                for idx, row in report_df.iterrows():
-                    engagement = (row.get('Overall_Avg_Attendance', 75) * 0.4 + 
-                                  row.get('Overall_Avg_Homework', 65) * 0.3 + 
-                                  row.get('Overall_Avg_Participation', 70) * 0.3) / 100
-                    pred_score = (60.4 * row.get('School_Resources_Score', 0.5) + 
-                                  17.9 * engagement + 
-                                  7.14 * row.get('Overall_Textbook_Access_Composite', 0.5) + 
-                                  2.87 * row.get('Overall_Avg_Attendance', 75)/100) * 0.8 + 20
-                    pred_score = max(0, min(100, pred_score))
-                    pred_risk = 1 / (1 + np.exp(-0.15 * (50 - pred_score)))
-                    predictions.append(pred_score)
-                    risks.append(pred_risk)
+                
+                # Check if prediction engine is available
+                if prediction_engine is not None and prediction_engine.is_models_loaded():
+                    st.info("✅ Using trained ML models for predictions")
+                    
+                    for idx, row in report_df.iterrows():
+                        try:
+                            student_data = row.to_dict()
+                            pred_score = prediction_engine.predict_score(student_data)
+                            pred_risk = prediction_engine.predict_risk(student_data)
+                            predictions.append(pred_score)
+                            risks.append(pred_risk)
+                        except Exception as e:
+                            # Fallback if prediction fails
+                            engagement = (row.get('Overall_Avg_Attendance', 75) * 0.4 + 
+                                         row.get('Overall_Avg_Homework', 65) * 0.3 + 
+                                         row.get('Overall_Avg_Participation', 70) * 0.3) / 100
+                            pred_score = (60.4 * row.get('School_Resources_Score', 0.5) + 
+                                         17.9 * engagement + 
+                                         7.14 * row.get('Overall_Textbook_Access_Composite', 0.5) + 
+                                         2.87 * row.get('Overall_Avg_Attendance', 75)/100) * 0.8 + 20
+                            pred_score = max(0, min(100, pred_score))
+                            pred_risk = 1 / (1 + np.exp(-0.15 * (50 - pred_score)))
+                            predictions.append(pred_score)
+                            risks.append(pred_risk)
+                else:
+                    st.warning("⚠️ Models not loaded. Using fallback calculations.")
+                    for idx, row in report_df.iterrows():
+                        engagement = (row.get('Overall_Avg_Attendance', 75) * 0.4 + 
+                                     row.get('Overall_Avg_Homework', 65) * 0.3 + 
+                                     row.get('Overall_Avg_Participation', 70) * 0.3) / 100
+                        pred_score = (60.4 * row.get('School_Resources_Score', 0.5) + 
+                                     17.9 * engagement + 
+                                     7.14 * row.get('Overall_Textbook_Access_Composite', 0.5) + 
+                                     2.87 * row.get('Overall_Avg_Attendance', 75)/100) * 0.8 + 20
+                        pred_score = max(0, min(100, pred_score))
+                        pred_risk = 1 / (1 + np.exp(-0.15 * (50 - pred_score)))
+                        predictions.append(pred_score)
+                        risks.append(pred_risk)
                 
                 report_df['Predicted_Score'] = predictions
                 report_df['Risk_Probability'] = risks
                 report_df['Risk_Status'] = report_df['Risk_Probability'].apply(lambda x: 'At Risk' if x > 0.5 else 'Not at Risk')
                 
+                # Display report
                 display_cols = ['Student_ID', 'Region', 'Gender', 'Overall_Average', 'Predicted_Score', 'Risk_Probability', 'Risk_Status']
                 display_cols = [c for c in display_cols if c in report_df.columns]
                 st.dataframe(report_df[display_cols], use_container_width=True, key="report_predictions")
                 
-                csv = report_df.to_csv(index=False)
-                st.download_button("📥 Download CSV", csv, "predictions_report.csv", "text/csv", key="download_predictions")
-            
-            elif report_type == "Student Clustering Report":
-                st.markdown("### Student Clustering Report")
+                # Prediction Summary
+                st.markdown("### 📊 Prediction Summary")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Total Students", len(report_df))
+                with col2:
+                    st.metric("Avg Predicted Score", f"{report_df['Predicted_Score'].mean():.1f}")
+                with col3:
+                    risk_count = (report_df['Risk_Status'] == 'At Risk').sum()
+                    st.metric("At-Risk Students", risk_count, delta=f"{(risk_count/len(report_df)*100):.1f}%")
                 
-                # Cluster definitions
-                cluster_definitions = {
+                # Model Information
+                with st.expander("📊 Model Information"):
+                    st.markdown("""
+                    **Prediction Model Details:**
+                    - **Regression Model:** XGBoost / Gradient Boosting (R² = 0.7855)
+                    - **Classification Model:** Gradient Boosting (AUC = 0.918)
+                    - **Top Predictors:** School Resources Score, Student Engagement, Attendance
+                    
+                    **Prediction Interpretation:**
+                    - **Predicted Score:** 0-100 scale (higher is better)
+                    - **Risk Probability:** 0-1 scale (higher indicates higher risk)
+                    - **Risk Status:** At Risk if probability > 0.5
+                    """)
+                
+                # Download button
+                csv = report_df.to_csv(index=False)
+                st.download_button("📥 Download Predictions Report (CSV)", csv, "predictions_report.csv", "text/csv", key="download_predictions")
+            
+            # ========================================================================
+            # ABOUT STUDENT REPORT (Based on Overall_Average)
+            # ========================================================================
+            elif report_type == "About Student Report":
+                st.markdown("### About Student Report")
+                st.markdown("*This report categorizes students based on their Overall Average score performance levels*")
+                st.markdown("---")
+                
+                # Define student categories based on Overall_Average
+                student_categories = {
                     'Low Performers': {
                         'criteria': 'Overall Average < 50',
                         'count': (df['Overall_Average'] < 50).sum(),
+                        'percentage': f"{(df['Overall_Average'] < 50).sum() / len(df) * 100:.1f}%",
                         'avg_score': df[df['Overall_Average'] < 50]['Overall_Average'].mean(),
-                        'avg_resources': df[df['Overall_Average'] < 50]['School_Resources_Score'].mean(),
-                        'avg_attendance': df[df['Overall_Average'] < 50]['Overall_Avg_Attendance'].mean(),
+                        'avg_resources': df[df['Overall_Average'] < 50]['School_Resources_Score'].mean() if 'School_Resources_Score' in df.columns else 0,
+                        'avg_attendance': df[df['Overall_Average'] < 50]['Overall_Avg_Attendance'].mean() if 'Overall_Avg_Attendance' in df.columns else 0,
+                        'description': 'Students who are performing below the passing threshold and require immediate intervention.',
                         'recommendations': [
-                            "Immediate academic intervention",
-                            "Small group tutoring",
-                            "Resource allocation priority",
-                            "Parent engagement programs"
+                            "Immediate academic intervention and personalized learning plan",
+                            "Small group tutoring and additional academic support",
+                            "Priority resource allocation for learning materials",
+                            "Parent engagement programs and regular progress monitoring",
+                            "Social-emotional support and motivation programs"
                         ]
                     },
                     'Medium Performers': {
                         'criteria': '50 ≤ Overall Average < 70',
                         'count': ((df['Overall_Average'] >= 50) & (df['Overall_Average'] < 70)).sum(),
+                        'percentage': f"{((df['Overall_Average'] >= 50) & (df['Overall_Average'] < 70)).sum() / len(df) * 100:.1f}%",
                         'avg_score': df[(df['Overall_Average'] >= 50) & (df['Overall_Average'] < 70)]['Overall_Average'].mean(),
-                        'avg_resources': df[(df['Overall_Average'] >= 50) & (df['Overall_Average'] < 70)]['School_Resources_Score'].mean(),
-                        'avg_attendance': df[(df['Overall_Average'] >= 50) & (df['Overall_Average'] < 70)]['Overall_Avg_Attendance'].mean(),
+                        'avg_resources': df[(df['Overall_Average'] >= 50) & (df['Overall_Average'] < 70)]['School_Resources_Score'].mean() if 'School_Resources_Score' in df.columns else 0,
+                        'avg_attendance': df[(df['Overall_Average'] >= 50) & (df['Overall_Average'] < 70)]['Overall_Avg_Attendance'].mean() if 'Overall_Avg_Attendance' in df.columns else 0,
+                        'description': 'Students performing at average level with potential for improvement.',
                         'recommendations': [
-                            "Targeted academic support",
-                            "Study skills workshops",
-                            "Regular progress monitoring",
-                            "Career guidance sessions"
+                            "Targeted academic support and study skills workshops",
+                            "Regular progress monitoring and feedback sessions",
+                            "Peer tutoring programs and collaborative learning",
+                            "Career guidance and academic counseling",
+                            "Enrichment activities to boost performance"
                         ]
                     },
                     'High Performers': {
                         'criteria': 'Overall Average ≥ 70',
                         'count': (df['Overall_Average'] >= 70).sum(),
+                        'percentage': f"{(df['Overall_Average'] >= 70).sum() / len(df) * 100:.1f}%",
                         'avg_score': df[df['Overall_Average'] >= 70]['Overall_Average'].mean(),
-                        'avg_resources': df[df['Overall_Average'] >= 70]['School_Resources_Score'].mean(),
-                        'avg_attendance': df[df['Overall_Average'] >= 70]['Overall_Avg_Attendance'].mean(),
+                        'avg_resources': df[df['Overall_Average'] >= 70]['School_Resources_Score'].mean() if 'School_Resources_Score' in df.columns else 0,
+                        'avg_attendance': df[df['Overall_Average'] >= 70]['Overall_Avg_Attendance'].mean() if 'Overall_Avg_Attendance' in df.columns else 0,
+                        'description': 'High-achieving students excelling in their academic performance.',
                         'recommendations': [
-                            "Enrichment programs",
-                            "Leadership opportunities",
-                            "College readiness",
-                            "STEM/STEAM initiatives"
+                            "Enrichment programs and advanced coursework",
+                            "Leadership and mentorship opportunities",
+                            "College readiness and career preparation programs",
+                            "STEM/STEAM initiatives and research projects",
+                            "National and international competition preparation"
                         ]
                     }
                 }
                 
-                # Display cluster distribution
-                st.markdown("#### Cluster Distribution")
-                cluster_data = []
-                for cluster, data in cluster_definitions.items():
-                    cluster_data.append({
-                        'Cluster': cluster,
+                # Student Distribution Table
+                st.markdown("#### Student Distribution")
+                student_data = []
+                for category, data in student_categories.items():
+                    student_data.append({
+                        'Performance Level': category,
                         'Criteria': data['criteria'],
-                        'Count': data['count'],
-                        'Percentage': f"{(data['count']/len(df)*100):.1f}%",
+                        'Count': f"{data['count']:,}",
+                        'Percentage': data['percentage'],
                         'Avg Score': f"{data['avg_score']:.1f}",
-                        'Avg Resources': f"{data['avg_resources']:.2f}",
-                        'Avg Attendance': f"{data['avg_attendance']:.1f}%"
+                        'Avg Resources': f"{data['avg_resources']:.2f}" if data['avg_resources'] else "N/A",
+                        'Avg Attendance': f"{data['avg_attendance']:.1f}%" if data['avg_attendance'] else "N/A"
                     })
-                st.dataframe(pd.DataFrame(cluster_data), use_container_width=True, key="cluster_table")
+                st.dataframe(pd.DataFrame(student_data), use_container_width=True, key="student_distribution_table")
                 
-                # Cluster visualization
-                st.markdown("#### Cluster Visualization")
+                # Student Distribution Visualization
+                st.markdown("#### Student Distribution Visualization")
                 fig = go.Figure(data=[
                     go.Bar(
-                        x=list(cluster_definitions.keys()),
-                        y=[data['count'] for data in cluster_definitions.values()],
+                        x=list(student_categories.keys()),
+                        y=[data['count'] for data in student_categories.values()],
                         marker_color=['#C73E1D', '#F18F01', '#18A999'],
-                        text=[f"{data['count']:,}" for data in cluster_definitions.values()],
-                        textposition='auto'
+                        text=[f"{data['count']:,}" for data in student_categories.values()],
+                        textposition='auto',
+                        textfont=dict(size=14)
                     )
                 ])
                 fig.update_layout(
-                    title="Student Performance Cluster Distribution",
+                    title="Student Performance Distribution",
                     xaxis_title="Performance Level",
                     yaxis_title="Number of Students",
-                    height=450
+                    height=450,
+                    plot_bgcolor='white',
+                    paper_bgcolor='white'
                 )
-                st.plotly_chart(fig, use_container_width=True, key="cluster_chart")
+                st.plotly_chart(fig, use_container_width=True, key="student_distribution_chart")
                 
-                # Regional cluster analysis
-                st.markdown("#### Regional Cluster Analysis")
-                region_clusters = df.groupby('Region').agg({
-                    'Overall_Average': ['mean', 'count'],
-                    'Student_ID': 'count'
+                # Regional Distribution Analysis
+                st.markdown("#### Regional Distribution Analysis")
+                st.markdown("*Breakdown of students by region with average scores*")
+                
+                region_stats = df.groupby('Region').agg({
+                    'Student_ID': 'count',
+                    'Overall_Average': 'mean'
                 }).round(2)
-                region_clusters.columns = ['Avg_Score', 'Total_Students', 'Count']
-                region_clusters['Risk_Rate'] = df.groupby('Region').apply(
-                    lambda x: (x['Overall_Average'] < 50).sum() / len(x) * 100
-                ).round(1)
-                region_clusters = region_clusters.sort_values('Risk_Rate', ascending=False)
-                st.dataframe(region_clusters.head(10), use_container_width=True, key="regional_cluster")
+                region_stats.columns = ['Total Students', 'Average Score']
+                region_stats = region_stats.sort_values('Total Students', ascending=False)
+                st.dataframe(region_stats, use_container_width=True, key="regional_distribution")
                 
-                # Recommendations per cluster
-                st.markdown("#### Cluster-Specific Recommendations")
-                for cluster, data in cluster_definitions.items():
-                    with st.expander(f"📌 {cluster} - {data['count']:,} students"):
+                # Regional performance visualization
+                fig2 = go.Figure()
+                fig2.add_trace(go.Bar(
+                    x=region_stats.index,
+                    y=region_stats['Average Score'],
+                    marker_color='#2E86AB',
+                    text=region_stats['Average Score'].round(1),
+                    textposition='auto'
+                ))
+                fig2.update_layout(
+                    title="Average Score by Region",
+                    xaxis_title="Region",
+                    yaxis_title="Average Score",
+                    height=450,
+                    xaxis_tickangle=-45
+                )
+                st.plotly_chart(fig2, use_container_width=True, key="regional_score_chart")
+                
+                # Recommendations about student level
+                st.markdown("#### Recommendations about Student Level")
+                
+                for category, data in student_categories.items():
+                    color = "#C73E1D" if category == "Low Performers" else "#F18F01" if category == "Medium Performers" else "#18A999"
+                    with st.expander(f"📌 {category} - {data['count']:,} students ({data['percentage']})"):
+                        st.markdown(f"**Description:** {data['description']}")
                         st.markdown(f"**Characteristics:**")
                         st.markdown(f"- Average Score: {data['avg_score']:.1f}")
-                        st.markdown(f"- Average Resources: {data['avg_resources']:.2f}")
-                        st.markdown(f"- Average Attendance: {data['avg_attendance']:.1f}%")
+                        if data['avg_resources']:
+                            st.markdown(f"- Average School Resources: {data['avg_resources']:.2f}")
+                        if data['avg_attendance']:
+                            st.markdown(f"- Average Attendance: {data['avg_attendance']:.1f}%")
                         st.markdown(f"**Recommendations:**")
                         for rec in data['recommendations']:
                             st.markdown(f"- {rec}")
                 
                 # Download button
-                cluster_export = pd.DataFrame(cluster_data)
-                csv = cluster_export.to_csv(index=False)
-                st.download_button("📥 Download CSV", csv, "clusters_report.csv", "text/csv", key="download_clusters")
+                student_export = pd.DataFrame(student_data)
+                csv = student_export.to_csv(index=False)
+                st.download_button("📥 Download Student Report (CSV)", csv, "student_report.csv", "text/csv", key="download_student_report")
             
+            # ========================================================================
+            # NATIONAL EXAM REPORT
+            # ========================================================================
+            elif report_type == "National Exam Report":
+                st.markdown("### National Exam Score Analysis Report")
+                st.markdown("*Comprehensive analysis of student performance on Ethiopian national examinations*")
+                st.markdown("---")
+                
+                # About National Exam
+                st.markdown("#### About Ethiopian National Examinations")
+                st.markdown("""
+                <div class="info-box">
+                <strong>📚 National Exam Structure:</strong><br><br>
+                
+                <strong>Social Science Track Subjects:</strong>
+                - History, Geography, Economics, Mathematics (Social)
+                
+                <strong>Natural Science Track Subjects:</strong>
+                - Biology, Chemistry, Physics, Mathematics (Natural)
+                
+                <strong>Common Subjects (All Students):</strong>
+                - Aptitude, English, Civics & Ethical Education
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Check if national exam columns exist
+                social_subjects = ['National_Exam_History', 'National_Exam_Geography', 'National_Exam_Economics', 'National_Exam_Math_Social']
+                natural_subjects = ['National_Exam_Biology', 'National_Exam_Chemistry', 'National_Exam_Physics', 'National_Exam_Math_Natural']
+                common_subjects = ['National_Exam_Aptitude', 'National_Exam_English', 'National_Exam_Civics_and_Ethical_Education']
+                
+                available_social = [s for s in social_subjects if s in df.columns]
+                available_natural = [n for n in natural_subjects if n in df.columns]
+                available_common = [c for c in common_subjects if c in df.columns]
+                
+                if available_social or available_natural or available_common:
+                    st.markdown("#### National Exam Performance by Track")
+                    
+                    # Calculate track averages
+                    if available_social:
+                        df['Social_Track_Avg'] = df[available_social].mean(axis=1)
+                        st.metric("Social Science Track Average", f"{df['Social_Track_Avg'].mean():.1f}")
+                    
+                    if available_natural:
+                        df['Natural_Track_Avg'] = df[available_natural].mean(axis=1)
+                        st.metric("Natural Science Track Average", f"{df['Natural_Track_Avg'].mean():.1f}")
+                    
+                    if available_common:
+                        df['Common_Subjects_Avg'] = df[available_common].mean(axis=1)
+                        st.metric("Common Subjects Average", f"{df['Common_Subjects_Avg'].mean():.1f}")
+                    
+                    # Model performance for national exam prediction
+                    st.markdown("#### National Exam Score Prediction Model")
+                    st.markdown("""
+                    The National Exam Score prediction model achieved the following performance:
+                    
+                    | Model | R² Score | MAE | RMSE |
+                    |-------|----------|-----|------|
+                    | Gradient Boosting | 0.4380 | 0.0814 | 0.1071 |
+                    | XGBoost | 0.4353 | 0.0816 | 0.1074 |
+                    | Random Forest | 0.4258 | 0.0823 | 0.1083 |
+                    
+                    **Key Insights:**
+                    - **Score_x_Participation** is the most important predictor (73.6% importance)
+                    - **Homework completion** contributes 7.2% to exam performance
+                    - The model explains ~43.8% of variance in National Exam Scores
+                    """)
+                    
+                    # Feature importance visualization
+                    national_importance = pd.DataFrame({
+                        'Feature': ['Score_x_Participation', 'Overall_Avg_Homework', 'School_Academic_Score',
+                                   'Overall_Test_Score_Avg', 'Overall_Avg_Attendance', 'Overall_Avg_Participation'],
+                        'Importance': [0.7356, 0.0720, 0.0669, 0.0431, 0.0178, 0.0162]
+                    })
+                    national_importance = national_importance.sort_values('Importance', ascending=True)
+                    
+                    fig = go.Figure(go.Bar(
+                        x=national_importance['Importance'],
+                        y=national_importance['Feature'],
+                        orientation='h',
+                        marker_color='#A23B72',
+                        text=[f'{imp:.1%}' for imp in national_importance['Importance']],
+                        textposition='auto'
+                    ))
+                    fig.update_layout(
+                        title="Feature Importance for National Exam Score Prediction",
+                        xaxis_title="Importance Score",
+                        yaxis_title="Features",
+                        height=400
+                    )
+                    st.plotly_chart(fig, use_container_width=True, key="national_importance_chart")
+                    
+                else:
+                    st.warning("National exam score data not available in the dataset.")
+                
+                # Download report
+                national_summary = pd.DataFrame({
+                    'Metric': ['Social Science Track Avg', 'Natural Science Track Avg', 'Common Subjects Avg'],
+                    'Value': [
+                        f"{df['Social_Track_Avg'].mean():.1f}" if available_social else "N/A",
+                        f"{df['Natural_Track_Avg'].mean():.1f}" if available_natural else "N/A",
+                        f"{df['Common_Subjects_Avg'].mean():.1f}" if available_common else "N/A"
+                    ]
+                })
+                csv = national_summary.to_csv(index=False)
+                st.download_button("📥 Download National Exam Report (CSV)", csv, "national_exam_report.csv", "text/csv", key="download_national")
+            
+            # ========================================================================
+            # SUMMARY STATISTICS
+            # ========================================================================
             elif report_type == "Summary Statistics":
                 st.markdown("### Summary Statistics Report")
                 summary = df.describe().round(2)
@@ -2189,21 +2375,58 @@ elif selected_page == "📋 Reports":
                 csv = summary.to_csv()
                 st.download_button("📥 Download CSV", csv, "summary_stats.csv", "text/csv", key="download_summary")
             
+            # ========================================================================
+            # FULL DATASET
+            # ========================================================================
             elif report_type == "Full Dataset":
                 st.markdown("### Full Dataset Export")
+                
+                # Get all available columns
+                all_columns = df.columns.tolist()
+                
+                # Select columns to export
                 export_cols = st.multiselect(
                     "Select columns to export",
-                    options=df.columns.tolist(),
-                    default=df.columns[:10].tolist(),
+                    options=all_columns,
+                    default=all_columns[:10] if len(all_columns) > 10 else all_columns,
                     key="export_cols_widget"
                 )
+                
                 if export_cols:
                     export_df = df[export_cols]
                     st.dataframe(export_df.head(100), use_container_width=True, key="full_dataset")
+                    st.caption(f"Showing first 100 rows of {len(export_df):,} total rows")
+                    
                     csv = export_df.to_csv(index=False)
-                    st.download_button("📥 Download CSV", csv, "full_dataset.csv", "text/csv", key="download_full")
+                    st.download_button(
+                        "📥 Download Full Dataset (CSV)", 
+                        csv, 
+                        "full_dataset.csv", 
+                        "text/csv", 
+                        key="download_full"
+                    )
+                    
+                    # Excel export option
+                    try:
+                        import io
+                        output = io.BytesIO()
+                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                            export_df.to_excel(writer, sheet_name='Student Data', index=False)
+                        st.download_button(
+                            "📥 Download Full Dataset (Excel)",
+                            output.getvalue(),
+                            "full_dataset.xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key="download_full_excel"
+                        )
+                    except:
+                        pass
+                else:
+                    st.warning("Please select at least one column to export.")
     
-    # One-page summary
+    # ========================================================================
+    # QUICK SUMMARY (Unchanged)
+    # ========================================================================
     st.markdown("---")
     st.markdown("### 📄 Quick Summary")
     
@@ -2228,10 +2451,10 @@ elif selected_page == "📋 Reports":
         - **Pass Rate:** {pass_rate:.1f}%
         - **At-Risk Students:** {risk_count:,} ({(risk_count/total*100):.1f}%)
         
-        ### Performance Clusters
-        - **High Performers:** {cluster_sizes['High']:,} ({(cluster_sizes['High']/total*100):.1f}%)
-        - **Medium Performers:** {cluster_sizes['Medium']:,} ({(cluster_sizes['Medium']/total*100):.1f}%)
-        - **Low Performers:** {cluster_sizes['Low']:,} ({(cluster_sizes['Low']/total*100):.1f}%)
+        ### Performance Distribution
+        - **High Performers (≥70):** {cluster_sizes['High']:,} ({(cluster_sizes['High']/total*100):.1f}%)
+        - **Medium Performers (50-69):** {cluster_sizes['Medium']:,} ({(cluster_sizes['Medium']/total*100):.1f}%)
+        - **Low Performers (<50):** {cluster_sizes['Low']:,} ({(cluster_sizes['Low']/total*100):.1f}%)
         
         ### Model Performance
         - **Best Regression Model:** XGBoost (R² = 0.7855)
@@ -2247,47 +2470,276 @@ elif selected_page == "📋 Reports":
         2. Improve textbook access and digital infrastructure
         3. Implement parent engagement programs
         4. Reduce teacher-student ratios in overcrowded schools
-        5. Target interventions for low-performing clusters
+        5. Target interventions for low-performing students
         """)
-
 # ============================================================================
 # PAGE: SETTINGS
 # ============================================================================
 elif selected_page == "⚙️ Settings":
     st.markdown("<h1 class='main-header'>⚙️ Settings</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='sub-header'>Configure dashboard parameters, manage models, and view system information</p>", unsafe_allow_html=True)
     
-    new_threshold = st.slider("Risk Threshold", 0.0, 1.0, st.session_state.risk_threshold, 0.01, key="risk_threshold_slider_widget")
+    # ========================================================================
+    # RISK THRESHOLD SETTINGS
+    # ========================================================================
+    st.markdown("### ⚠️ Risk Classification Threshold")
+    st.markdown("Adjust the threshold for classifying students as 'At Risk'")
+    
+    new_threshold = st.slider(
+        "Risk Threshold", 
+        0.0, 1.0, 
+        st.session_state.risk_threshold, 
+        0.01, 
+        key="risk_threshold_slider_widget",
+        help="Students with risk probability above this threshold are classified as 'At Risk'"
+    )
     if new_threshold != st.session_state.risk_threshold:
         st.session_state.risk_threshold = new_threshold
-        st.success(f"Risk threshold updated to {new_threshold:.2f}")
+        st.success(f"✅ Risk threshold updated to {new_threshold:.2f}")
     
     st.markdown("---")
+    
+    # ========================================================================
+    # MODEL MANAGEMENT
+    # ========================================================================
     st.markdown("### 🤖 Model Management")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🔄 Reload Models", use_container_width=True, key="reload_models_widget"):
-            st.success("✅ Models reloaded successfully!")
-    
-    with col2:
-        if st.button("📊 Test Models", use_container_width=True, key="test_models_widget"):
-            st.success("✅ Models working! Test score: 72.5, Test risk: 0.35")
+    # Get model status from prediction engine
+    if st.session_state.prediction_engine is not None:
+        status = st.session_state.prediction_engine.get_model_status()
+        models_loaded = status.get('models_loaded', False)
+        
+        # Display model status cards
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if models_loaded:
+                st.success("✅ **Regression Model**")
+                st.markdown(f"   - Type: {status.get('regression_type', 'Unknown')}")
+                st.markdown(f"   - Features: {status.get('features_count', 0)}")
+                st.markdown(f"   - Status: Loaded")
+                st.markdown(f"   - R² Score: 0.7855")
+                st.markdown(f"   - MAE: 2.98")
+            else:
+                st.error("❌ **Regression Model**")
+                st.markdown(f"   - Status: Not Loaded")
+                if status.get('error'):
+                    st.markdown(f"   - Error: {status['error'][:100]}...")
+        
+        with col2:
+            if models_loaded:
+                st.success("✅ **Classification Model**")
+                st.markdown(f"   - Type: {status.get('classification_type', 'Unknown')}")
+                st.markdown(f"   - Features: {status.get('features_count', 0)}")
+                st.markdown(f"   - Status: Loaded")
+                st.markdown(f"   - ROC-AUC: 0.918")
+                st.markdown(f"   - F1-Score: 0.778")
+            else:
+                st.error("❌ **Classification Model**")
+                st.markdown(f"   - Status: Not Loaded")
+        
+        # Model management buttons
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🔄 Reload Models", use_container_width=True, key="reload_models_widget"):
+                with st.spinner("Reloading models..."):
+                    try:
+                        from utils.predictions import PredictionEngine
+                        st.session_state.prediction_engine = PredictionEngine()
+                        
+                        if st.session_state.prediction_engine.is_models_loaded():
+                            st.success("✅ Models reloaded successfully!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Models failed to load. Please check model files.")
+                            if st.session_state.prediction_engine.load_error:
+                                st.error(f"Error: {st.session_state.prediction_engine.load_error}")
+                    except Exception as e:
+                        st.error(f"Error reloading models: {e}")
+        
+        with col2:
+            if st.button("📊 Test Models", use_container_width=True, key="test_models_widget"):
+                with st.spinner("Testing models..."):
+                    if models_loaded:
+                        test_data = {
+                            'School_Resources_Score': 0.7,
+                            'Overall_Engagement_Score': 75,
+                            'School_Academic_Score': 0.6,
+                            'Overall_Textbook_Access_Composite': 0.7,
+                            'Overall_Avg_Attendance': 85,
+                            'Teacher_Student_Ratio': 35,
+                            'Overall_Avg_Homework': 80,
+                            'Overall_Avg_Participation': 75,
+                            'Parental_Involvement': 0.6,
+                            'Gender': 'Male',
+                            'Region': 'Addis Ababa',
+                            'Health_Issue': 'No Issue',
+                            'Age': 17,
+                            'Field_Choice': 'Social',
+                            'School_Type': 'Public',
+                            'Career_Interest': 'Teacher',
+                            'Home_Internet_Access': 'Yes',
+                            'Electricity_Access': 'Yes',
+                            'School_Location': 'Urban'
+                        }
+                        
+                        try:
+                            test_score = st.session_state.prediction_engine.predict_score(test_data)
+                            test_risk = st.session_state.prediction_engine.predict_risk(test_data)
+                            
+                            st.success(f"✅ Models working!")
+                            st.info(f"📊 Test Score: {test_score:.1f}")
+                            st.info(f"⚠️ Test Risk: {test_risk:.2f} ({test_risk*100:.1f}%)")
+                        except Exception as e:
+                            st.error(f"Test failed: {e}")
+                    else:
+                        st.warning("⚠️ Models not loaded. Cannot test.")
+        
+        # Model directory info
+        with st.expander("📁 Model Directory Information"):
+            st.markdown(f"**Model Directory:** `{status.get('model_dir', 'Unknown')}`")
+            st.markdown("**Required Model Files:**")
+            st.markdown("""
+            - `gradient_boosting_model_full.pkl` - Regression model
+            - `student_risk_classifier.pkl` - Classification model  
+            - `metadata_classification_v1.json` - Feature metadata (optional)
+            """)
+            
+            import os
+            from pathlib import Path
+            model_dir = Path(status.get('model_dir', ''))
+            if model_dir.exists():
+                st.markdown("**Files found in model directory:**")
+                for file in model_dir.glob("*"):
+                    if file.suffix in ['.pkl', '.json']:
+                        st.markdown(f"- `{file.name}`")
+            else:
+                st.warning(f"Model directory not found: {model_dir}")
     
     st.markdown("---")
+    
+    # ========================================================================
+    # REQUIRED FEATURES FOR PREDICTION (Organized by categories)
+    # ========================================================================
     st.markdown("### 📋 Required Features for Prediction")
-    required = [
-        "School_Resources_Score", "Overall_Engagement_Score", "School_Academic_Score",
-        "Overall_Textbook_Access_Composite", "Overall_Avg_Attendance", "Teacher_Student_Ratio",
-        "Overall_Avg_Homework", "Overall_Avg_Participation", "Parental_Involvement"
-    ]
+    st.markdown("These features are required for accurate predictions. Missing features will use default values.")
     
-    for feature in required:
-        if feature in st.session_state.df_processed.columns:
-            st.success(f"✅ {feature}")
-        else:
-            st.warning(f"⚠️ {feature}")
+    # Get available features from processed data
+    available_features = st.session_state.df_processed.columns.tolist() if st.session_state.df_processed is not None else []
+    
+    # Define feature groups
+    feature_groups = {
+        '👤 Demographic & Family Factors': [
+            'Gender', 'Age', 'Region', 'Field Choice'
+        ],
+        '🏠 Family, Home Environment & Health': [
+            'Father Education', 'Mother Education', 'Parental Involvement',
+            'Home Internet Access', 'Electricity Access', 'Health Issue'
+        ],
+        '🏫 School Environment & Resources': [
+            'School Type', 'School Location', 'School Resources Score',
+            'School Academic Score', 'Teacher-Student Ratio', 'Student-to-Resources Ratio'
+        ],
+        '💪 Student Engagement & Career': [
+            'Attendance (%)', 'Homework Completion (%)', 'Participation (%)', 'Career Interest'
+        ]
+    }
+    
+    # Map feature names to actual column names (handling variations)
+    feature_mapping = {
+        'Gender': ['Gender'],
+        'Age': ['Age'],
+        'Region': ['Region'],
+        'Field Choice': ['Field_Choice', 'FieldChoice'],
+        'Father Education': ['Father_Education', 'FatherEducation'],
+        'Mother Education': ['Mother_Education', 'MotherEducation'],
+        'Parental Involvement': ['Parental_Involvement', 'ParentalInvolvement'],
+        'Home Internet Access': ['Home_Internet_Access', 'HomeInternetAccess'],
+        'Electricity Access': ['Electricity_Access', 'ElectricityAccess'],
+        'Health Issue': ['Health_Issue', 'HealthIssue'],
+        'School Type': ['School_Type', 'SchoolType'],
+        'School Location': ['School_Location', 'SchoolLocation'],
+        'School Resources Score': ['School_Resources_Score', 'SchoolResourcesScore'],
+        'School Academic Score': ['School_Academic_Score', 'SchoolAcademicScore'],
+        'Teacher-Student Ratio': ['Teacher_Student_Ratio', 'TeacherStudentRatio'],
+        'Student-to-Resources Ratio': ['Student_to_Resources_Ratio', 'StudentToResourcesRatio'],
+        'Attendance (%)': ['Overall_Avg_Attendance', 'Attendance', 'Avg_Attendance'],
+        'Homework Completion (%)': ['Overall_Avg_Homework', 'Homework', 'Avg_Homework'],
+        'Participation (%)': ['Overall_Avg_Participation', 'Participation', 'Avg_Participation'],
+        'Career Interest': ['Career_Interest', 'CareerInterest']
+    }
+    
+    def check_feature_exists(feature_name):
+        """Check if a feature exists in the dataframe"""
+        possible_names = feature_mapping.get(feature_name, [feature_name])
+        for name in possible_names:
+            if name in available_features:
+                return True
+        return False
+    
+    # Create two columns for the layout
+    col_left, col_right = st.columns(2)
+    
+    # Left column - First two groups
+    with col_left:
+        # Group 1: Demographic & Family Factors
+        st.markdown("#### 👤 Demographic & Family Factors")
+        for feature in feature_groups['👤 Demographic & Family Factors']:
+            exists = check_feature_exists(feature)
+            if exists:
+                st.success(f"✅ **{feature}**")
+            else:
+                st.warning(f"⚠️ **{feature}**")
+        
+        st.markdown("---")
+        
+        # Group 2: Family, Home Environment & Health
+        st.markdown("#### 🏠 Family, Home Environment & Health")
+        for feature in feature_groups['🏠 Family, Home Environment & Health']:
+            exists = check_feature_exists(feature)
+            if exists:
+                st.success(f"✅ **{feature}**")
+            else:
+                st.warning(f"⚠️ **{feature}**")
+    
+    # Right column - Last two groups
+    with col_right:
+        # Group 3: School Environment & Resources
+        st.markdown("#### 🏫 School Environment & Resources")
+        for feature in feature_groups['🏫 School Environment & Resources']:
+            exists = check_feature_exists(feature)
+            if exists:
+                st.success(f"✅ **{feature}**")
+            else:
+                st.warning(f"⚠️ **{feature}**")
+        
+        st.markdown("---")
+        
+        # Group 4: Student Engagement & Career
+        st.markdown("#### 💪 Student Engagement & Career")
+        for feature in feature_groups['💪 Student Engagement & Career']:
+            exists = check_feature_exists(feature)
+            if exists:
+                st.success(f"✅ **{feature}**")
+            else:
+                st.warning(f"⚠️ **{feature}**")
+    
+    # Feature statistics
+    total_features = sum(len(group) for group in feature_groups.values())
+    available_count = sum(1 for feature in [f for group in feature_groups.values() for f in group] if check_feature_exists(feature))
     
     st.markdown("---")
+    st.markdown(f"**Feature Coverage:** {available_count}/{total_features} features available ({available_count/total_features*100:.1f}%)")
+    
+    if available_count < total_features:
+        st.info("💡 **Tip:** Missing features will use default values. For best predictions, ensure all features are present in your dataset.")
+    
+    st.markdown("---")
+    
+    # ========================================================================
+    # DATA MANAGEMENT
+    # ========================================================================
     st.markdown("### 📁 Data Management")
     
     uploaded_file = st.file_uploader("Upload New Dataset (CSV)", type=['csv'], key="data_upload_widget")
@@ -2296,27 +2748,99 @@ elif selected_page == "⚙️ Settings":
             new_df = pd.read_csv(uploaded_file)
             st.success(f"✅ Dataset loaded: {len(new_df):,} rows, {len(new_df.columns)} columns")
             st.dataframe(new_df.head(), use_container_width=True)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Apply New Dataset", use_container_width=True, key="apply_dataset"):
+                    st.session_state.df_original = new_df
+                    st.session_state.data_loaded = False
+                    st.rerun()
+            with col2:
+                if st.button("Cancel", use_container_width=True, key="cancel_upload"):
+                    st.rerun()
         except Exception as e:
             st.error(f"Error loading dataset: {e}")
     
     st.markdown("---")
+    
+    # ========================================================================
+    # SYSTEM INFORMATION
+    # ========================================================================
+    st.markdown("### ℹ️ System Information")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Dashboard Information:**")
+        st.markdown(f"- Version: 2.0.0")
+        st.markdown(f"- Students Loaded: {len(st.session_state.df_original):,}" if st.session_state.df_original is not None else "Students Loaded: N/A")
+        st.markdown(f"- Features Available: {len(available_features)}")
+        st.markdown(f"- Risk Threshold: {st.session_state.risk_threshold:.2f}")
+    
+    with col2:
+        st.markdown("**Model Information:**")
+        if st.session_state.prediction_engine is not None:
+            status = st.session_state.prediction_engine.get_model_status()
+            st.markdown(f"- Models Loaded: {'✅ Yes' if status.get('models_loaded') else '❌ No'}")
+            if status.get('models_loaded'):
+                st.markdown(f"- Regression: {status.get('regression_type', 'Unknown')}")
+                st.markdown(f"- Classification: {status.get('classification_type', 'Unknown')}")
+        else:
+            st.markdown("- Models Loaded: ❌ No")
+    
+    # Performance metrics
+    st.markdown("**Model Performance Metrics:**")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Regression R²", "0.7855")
+    with col2:
+        st.metric("Regression MAE", "2.98")
+    with col3:
+        st.metric("Classification AUC", "0.918")
+    with col4:
+        st.metric("Classification F1", "0.778")
+    
+    st.markdown("---")
+    
+    # ========================================================================
+    # ABOUT SECTION
+    # ========================================================================
     st.markdown("### ℹ️ About")
     st.info("""
-    **Ethiopian Student Performance Dashboard v1.0**
+    **Ethiopian Student Performance Dashboard v2.0**
     
     **Models:**
-    - Regression: XGBoost (R² = 0.7855, MAE = 2.98)
-    - Classification: Gradient Boosting (AUC = 0.918, F1 = 0.778)
+    - **Regression:** XGBoost / Gradient Boosting (R² = 0.7855, MAE = 2.98)
+    - **Classification:** Gradient Boosting (AUC = 0.918, F1 = 0.778)
     
     **Features:**
-    - Real-time student performance prediction
-    - Risk assessment and classification
-    - Interactive simulations
-    - Comprehensive analytics with SHAP
+    - Real-time student performance prediction using trained ML models
+    - Risk assessment and classification with customizable thresholds
+    - Interactive simulations for what-if analysis
+    - Comprehensive analytics with SHAP explanations
     - Exportable reports (Predictions, Clusters, Summary)
+    - Student search and filtering capabilities
     
     **Data Source:** Ethiopian Students Dataset (100,000+ students)
+    
+    **Technology Stack:**
+    - Streamlit for dashboard interface
+    - Plotly for interactive visualizations
+    - Scikit-learn / XGBoost for ML models
+    - Pandas / NumPy for data processing
+    
+    **Support:**
+    For issues or questions, please contact the development team.
     """)
+    
+    # Reset all settings button
+    st.markdown("---")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("🔄 Reset All Settings to Default", use_container_width=True, key="reset_all"):
+            st.session_state.risk_threshold = 0.5
+            st.success("✅ All settings reset to default values!")
+            st.rerun()
 
 st.markdown("---")
 st.markdown("<p style='text-align: center; color: #666;'>© 2026 Ethiopian Student Performance Dashboard | Powered by Machine Learning | XGBoost & Gradient Boosting</p>", unsafe_allow_html=True)
