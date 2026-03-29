@@ -857,25 +857,22 @@ if selected_page == "📈 Overview":
     st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
     
     # See More Button for Power BI
+    st.markdown("---")
+    st.info("📈 **Drill down into student performance, risk heatmaps, and resource optimization analytics**")
+
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown("---")
-        st.info("📈 **Drill down into student performance, risk heatmaps, and resource optimization analytics**")
         if st.button("🔍 Explore Interactive Power BI Dashboard", use_container_width=True, key="see_more_powerbi"):
             st.session_state.show_powerbi = not st.session_state.show_powerbi
 
     if st.session_state.show_powerbi:
         st.markdown("---")
-        st.subheader("📊 Interactive Power BI Dashboard")
-        
-        # Simple one-line description to attract users
-        st.info("📈 **Interactive Power BI Dashboard - Student performance, risk analysis & resource optimization**")
+        st.markdown("### 📊 Interactive Power BI Dashboard")
+        st.caption("Visualize student performance, risk analysis, and resource allocation insights")
         
         # Power BI Embed
         powerbi_embed_url = "https://app.powerbi.com/view?r=your_embed_url_here"
-        st.markdown(f"""
-        <iframe width="100%" height="550" src="{powerbi_embed_url}" frameborder="0" allowFullScreen="true" style="border-radius: 10px;"></iframe>
-        """, unsafe_allow_html=True)
+        st.components.v1.iframe(powerbi_embed_url, height=550, scrolling=True)
         st.caption("📌 **Note:** Replace with your actual Power BI embed URL for live interactive dashboard")
 # ============================================================================
 # PAGE: STUDENTS (with filters on right side) - USING TRAINED MODELS
@@ -1389,11 +1386,6 @@ elif selected_page == "📊 Analytics":
             st.markdown("- Cluster 0 → Low Performers")
             st.markdown("- Cluster 1 → Medium Performers")
             st.markdown("- Cluster 2 → High Performers")
-            st.markdown("---")
-            st.markdown("**Cluster Sizes:**")
-            st.markdown(f"- **High Performers:** {cluster_sizes.get('High', 0):,} students")
-            st.markdown(f"- **Medium Performers:** {cluster_sizes.get('Medium', 0):,} students")
-            st.markdown(f"- **Low Performers:** {cluster_sizes.get('Low', 0):,} students")
             st.markdown("---")
             st.markdown("**Three distinct student groups identified:**")
             st.markdown("- High Performers: Top academic achievement")
