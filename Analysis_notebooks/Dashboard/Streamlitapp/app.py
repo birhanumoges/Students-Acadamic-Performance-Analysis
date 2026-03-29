@@ -1333,67 +1333,15 @@ elif selected_page == "📊 Analytics":
         The model achieved a **R² score of 0.4380**, explaining 43.8% of the variance in national exam scores.
         """)
         st.markdown('</div>', unsafe_allow_html=True)
-        
-        # National Exam Model Performance
-        national_performance = pd.DataFrame({
-            'Model': ['Gradient Boosting', 'XGBoost', 'Random Forest', 'Ridge Regression', 'Linear Regression', 'Lasso Regression'],
-            'R² Score': [0.4380, 0.4353, 0.4258, 0.4058, 0.4058, 0.4043],
-            'MAE': [0.0814, 0.0816, 0.0823, 0.0838, 0.0838, 0.0839],
-            'RMSE': [0.1071, 0.1074, 0.1083, 0.1101, 0.1101, 0.1103]
-        })
-        st.dataframe(national_performance, use_container_width=True, key="national_performance")
-        
-        # National Exam Feature Importance
-        st.markdown("#### Feature Importance - National Exam Score Model")
-        national_importance = pd.DataFrame({
-            'Feature': ['Score_x_Participation', 'Overall_Avg_Homework', 'School_Academic_Score',
-                       'Overall_Test_Score_Avg', 'Overall_Avg_Attendance', 'Overall_Avg_Participation',
-                       'School_Resources_Score', 'Parental_Involvement'],
-            'Importance': [0.7356, 0.0720, 0.0669, 0.0431, 0.0178, 0.0162, 0.0133, 0.0116]
-        })
-        national_importance = national_importance.sort_values('Importance', ascending=True)
-        fig = go.Figure(go.Bar(
-            x=national_importance['Importance'],
-            y=national_importance['Feature'],
-            orientation='h',
-            marker_color='#A23B72',
-            text=[f'{imp:.1%}' for imp in national_importance['Importance']],
-            textposition='auto'
-        ))
-        fig.update_layout(
-            title="Top Features Impacting National Exam Scores",
-            xaxis_title="Importance Score",
-            yaxis_title="Features",
-            height=500
-        )
-        st.plotly_chart(fig, use_container_width=True, key="national_importance")
-        
-        # Track-based analysis
-        st.markdown("#### Track-Based Performance Analysis")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("**Social Science Track Subjects:**")
-            st.markdown("- History")
-            st.markdown("- Geography")
-            st.markdown("- Economics")
-            st.markdown("- Mathematics (Social)")
-        with col2:
-            st.markdown("**Natural Science Track Subjects:**")
-            st.markdown("- Biology")
-            st.markdown("- Chemistry")
-            st.markdown("- Physics")
-            st.markdown("- Mathematics (Natural)")
-        
-        st.markdown('<div class="success-box">', unsafe_allow_html=True)
-        st.markdown("""
-        **Key Insights from National Exam Model:**
-        
-        1. **Score_x_Participation** is the most important predictor (73.6% importance)
-        2. **Homework completion** contributes 7.2% to exam performance
-        3. **School academic score** is the third most important factor (6.7%)
-        4. The model shows good fit with Durbin-Watson statistic of 2.00 (independent residuals)
-        """)
-        st.markdown('</div>', unsafe_allow_html=True)
+        # ============================================================================
+        # QUICK NAVIGATION BUTTON TO REPORTS PAGE
+        # ============================================================================
+
+        # Add this button in your Analytics page
+        if st.button("📊 View National Exam Report", type="primary"):
+            st.session_state.page = "📋 Reports"
+            st.session_state.pre_selected_report = "National Exam Report"
+            st.rerun()
     with tab3:
         # Show loading spinner only for this tab
         with st.spinner("Loading clustering visualizations..."):
@@ -2259,19 +2207,18 @@ elif selected_page == "📋 Reports":
                 csv = student_export.to_csv(index=False)
                 st.download_button("📥 Download Student Report (CSV)", csv, "student_report.csv", "text/csv", key="download_student_report")
             
-            # ========================================================================
+            # ============================================================================
             # NATIONAL EXAM REPORT
-            # ========================================================================
+            # ============================================================================
             elif report_type == "National Exam Report":
                 st.markdown("### National Exam Score Analysis Report")
                 st.markdown("*Comprehensive analysis of student performance on Ethiopian national examinations*")
                 st.markdown("---")
                 
-                # About National Exam
-                st.markdown("#### About Ethiopian National Examinations")
+                # About National Exam and Model Disclaimer
                 st.markdown("""
                 <div class="info-box">
-                <strong>📚 National Exam Structure:</strong><br><br>
+                <strong>📚 About Ethiopian National Examinations:</strong><br><br>
                 
                 <strong>Social Science Track Subjects:</strong>
                 - History, Geography, Economics, Mathematics (Social)
@@ -2281,10 +2228,160 @@ elif selected_page == "📋 Reports":
                 
                 <strong>Common Subjects (All Students):</strong>
                 - Aptitude, English, Civics & Ethical Education
+                
+                ---
+                
+                <strong>⚠️ Model Note:</strong><br>
+                The National Exam Score prediction model is designed for <strong>class-level performance analysis</strong> 
+                and educational policy insights. While it provides valuable trends and patterns, it has <strong>limitations 
+                for individual student prediction</strong> due to the complex nature of national examinations. 
+                Use these predictions as guidance, not as definitive outcomes for individual students.
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Check if national exam columns exist
+                # Check if total national exam score column exists or calculate it
+                if 'Total_National_Exam_Score' not in df.columns:
+                    # Calculate total from available subjects
+                    social_subjects = ['National_Exam_History', 'National_Exam_Geography', 'National_Exam_Economics', 'National_Exam_Math_Social']
+                    natural_subjects = ['National_Exam_Biology', 'National_Exam_Chemistry', 'National_Exam_Physics', 'National_Exam_Math_Natural']
+                    common_subjects = ['National_Exam_Aptitude', 'National_Exam_English', 'National_Exam_Civics_and_Ethical_Education']
+                    
+                    all_exam_cols = [c for c in social_subjects + natural_subjects + common_subjects if c in df.columns]
+                    if all_exam_cols:
+                        df['Total_National_Exam_Score'] = df[all_exam_cols].sum(axis=1)
+                
+                # ========================================================================
+                # NATIONAL EXAM SCORE DISTRIBUTION (>350 and <350)
+                # ========================================================================
+                if 'Total_National_Exam_Score' in df.columns:
+                    st.markdown("### 📊 National Exam Score Distribution")
+                    st.markdown("*Analysis of students scoring above and below 350 points*")
+                    
+                    # Calculate counts
+                    high_score_count = (df['Total_National_Exam_Score'] >= 350).sum()
+                    low_score_count = (df['Total_National_Exam_Score'] < 350).sum()
+                    high_score_percentage = (high_score_count / len(df)) * 100
+                    low_score_percentage = (low_score_count / len(df)) * 100
+                    
+                    # Score Distribution Table
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("#### Overall Score Distribution")
+                        score_distribution = pd.DataFrame({
+                            'Category': ['High Performers (≥350)', 'Low Performers (<350)'],
+                            'Number of Students': [f"{high_score_count:,}", f"{low_score_count:,}"],
+                            'Percentage': [f"{high_score_percentage:.1f}%", f"{low_score_percentage:.1f}%"],
+                            'Average Score': [
+                                f"{df[df['Total_National_Exam_Score'] >= 350]['Total_National_Exam_Score'].mean():.1f}",
+                                f"{df[df['Total_National_Exam_Score'] < 350]['Total_National_Exam_Score'].mean():.1f}"
+                            ]
+                        })
+                        st.dataframe(score_distribution, use_container_width=True, key="score_dist_table")
+                        
+                        # Score Distribution Visualization
+                        fig = go.Figure(data=[
+                            go.Bar(
+                                name='High Performers (≥350)',
+                                x=['Score Category'],
+                                y=[high_score_count],
+                                marker_color='#18A999',
+                                text=[f"{high_score_count:,} ({high_score_percentage:.1f}%)"],
+                                textposition='auto'
+                            ),
+                            go.Bar(
+                                name='Low Performers (<350)',
+                                x=['Score Category'],
+                                y=[low_score_count],
+                                marker_color='#C73E1D',
+                                text=[f"{low_score_count:,} ({low_score_percentage:.1f}%)"],
+                                textposition='auto'
+                            )
+                        ])
+                        fig.update_layout(
+                            title="Student Distribution by National Exam Score",
+                            xaxis_title="Score Category",
+                            yaxis_title="Number of Students",
+                            height=400,
+                            barmode='group'
+                        )
+                        st.plotly_chart(fig, use_container_width=True, key="score_dist_chart")
+                    
+                    with col2:
+                        # Score histogram
+                        fig = go.Figure()
+                        fig.add_trace(go.Histogram(
+                            x=df['Total_National_Exam_Score'],
+                            nbinsx=30,
+                            marker_color='#2E86AB',
+                            opacity=0.7,
+                            name='Score Distribution'
+                        ))
+                        fig.add_vline(x=350, line_dash="dash", line_color='#F18F01',
+                                    annotation_text="Threshold (350)", annotation_position="top")
+                        fig.add_vline(x=df['Total_National_Exam_Score'].mean(), line_dash="dash", line_color='#C73E1D',
+                                    annotation_text=f"Mean: {df['Total_National_Exam_Score'].mean():.1f}")
+                        fig.update_layout(
+                            title="Distribution of Total National Exam Scores",
+                            xaxis_title="Total National Exam Score",
+                            yaxis_title="Number of Students",
+                            height=400
+                        )
+                        st.plotly_chart(fig, use_container_width=True, key="score_histogram")
+                    
+                    # ========================================================================
+                    # REGIONAL BREAKDOWN TABLE
+                    # ========================================================================
+                    st.markdown("#### Regional Breakdown of National Exam Performance")
+                    
+                    regional_score_analysis = df.groupby('Region').agg({
+                        'Total_National_Exam_Score': ['count', 'mean', 'min', 'max'],
+                        'Student_ID': 'count'
+                    }).round(2)
+                    
+                    # Add high/low performer counts per region
+                    region_high_counts = df[df['Total_National_Exam_Score'] >= 350].groupby('Region').size()
+                    region_low_counts = df[df['Total_National_Exam_Score'] < 350].groupby('Region').size()
+                    
+                    regional_summary = pd.DataFrame({
+                        'Region': df['Region'].unique(),
+                        'Total Students': [len(df[df['Region'] == r]) for r in df['Region'].unique()],
+                        'High Performers (≥350)': [region_high_counts.get(r, 0) for r in df['Region'].unique()],
+                        'Low Performers (<350)': [region_low_counts.get(r, 0) for r in df['Region'].unique()],
+                        'High Performer %': [f"{(region_high_counts.get(r, 0)/len(df[df['Region'] == r])*100):.1f}%" for r in df['Region'].unique()],
+                        'Avg Score': [df[df['Region'] == r]['Total_National_Exam_Score'].mean() for r in df['Region'].unique()]
+                    })
+                    regional_summary = regional_summary.sort_values('Avg Score', ascending=False)
+                    
+                    st.dataframe(regional_summary, use_container_width=True, key="regional_score_table")
+                    
+                    # Regional visualization
+                    fig = go.Figure()
+                    fig.add_trace(go.Bar(
+                        x=regional_summary['Region'],
+                        y=regional_summary['Avg Score'],
+                        marker_color='#2E86AB',
+                        text=regional_summary['Avg Score'].round(1),
+                        textposition='auto',
+                        name='Average Score'
+                    ))
+                    fig.add_hline(y=350, line_dash="dash", line_color='#F18F01',
+                                annotation_text="Threshold (350)")
+                    fig.update_layout(
+                        title="Average National Exam Score by Region",
+                        xaxis_title="Region",
+                        yaxis_title="Average Score",
+                        height=500,
+                        xaxis_tickangle=-45
+                    )
+                    st.plotly_chart(fig, use_container_width=True, key="regional_score_bar")
+                
+                # ========================================================================
+                # NATIONAL EXAM PERFORMANCE BY TRACK (Horizontal)
+                # ========================================================================
+                st.markdown("### 📈 National Exam Performance by Track")
+                
+                # Check for track-specific columns
                 social_subjects = ['National_Exam_History', 'National_Exam_Geography', 'National_Exam_Economics', 'National_Exam_Math_Social']
                 natural_subjects = ['National_Exam_Biology', 'National_Exam_Chemistry', 'National_Exam_Physics', 'National_Exam_Math_Natural']
                 common_subjects = ['National_Exam_Aptitude', 'National_Exam_English', 'National_Exam_Civics_and_Ethical_Education']
@@ -2294,77 +2391,205 @@ elif selected_page == "📋 Reports":
                 available_common = [c for c in common_subjects if c in df.columns]
                 
                 if available_social or available_natural or available_common:
-                    st.markdown("#### National Exam Performance by Track")
+                    # Create horizontal bar chart for track performance
+                    track_data = []
                     
-                    # Calculate track averages
                     if available_social:
-                        df['Social_Track_Avg'] = df[available_social].mean(axis=1)
-                        st.metric("Social Science Track Average", f"{df['Social_Track_Avg'].mean():.1f}")
+                        social_avg = df[available_social].mean().mean()
+                        track_data.append({'Track': 'Social Science', 'Average Score': social_avg, 'Color': '#A23B72'})
+                        
+                        # Individual subject scores for social track
+                        st.markdown("#### Social Science Track Details")
+                        social_scores = df[available_social].mean().sort_values(ascending=True)
+                        fig_social = go.Figure(go.Bar(
+                            x=social_scores.values,
+                            y=social_scores.index,
+                            orientation='h',
+                            marker_color='#A23B72',
+                            text=[f'{v:.1f}' for v in social_scores.values],
+                            textposition='auto'
+                        ))
+                        fig_social.update_layout(
+                            title="Social Science Subject Scores",
+                            xaxis_title="Average Score",
+                            yaxis_title="Subject",
+                            height=300
+                        )
+                        st.plotly_chart(fig_social, use_container_width=True, key="social_scores")
                     
                     if available_natural:
-                        df['Natural_Track_Avg'] = df[available_natural].mean(axis=1)
-                        st.metric("Natural Science Track Average", f"{df['Natural_Track_Avg'].mean():.1f}")
+                        natural_avg = df[available_natural].mean().mean()
+                        track_data.append({'Track': 'Natural Science', 'Average Score': natural_avg, 'Color': '#18A999'})
+                        
+                        # Individual subject scores for natural track
+                        st.markdown("#### Natural Science Track Details")
+                        natural_scores = df[available_natural].mean().sort_values(ascending=True)
+                        fig_natural = go.Figure(go.Bar(
+                            x=natural_scores.values,
+                            y=natural_scores.index,
+                            orientation='h',
+                            marker_color='#18A999',
+                            text=[f'{v:.1f}' for v in natural_scores.values],
+                            textposition='auto'
+                        ))
+                        fig_natural.update_layout(
+                            title="Natural Science Subject Scores",
+                            xaxis_title="Average Score",
+                            yaxis_title="Subject",
+                            height=300
+                        )
+                        st.plotly_chart(fig_natural, use_container_width=True, key="natural_scores")
                     
                     if available_common:
-                        df['Common_Subjects_Avg'] = df[available_common].mean(axis=1)
-                        st.metric("Common Subjects Average", f"{df['Common_Subjects_Avg'].mean():.1f}")
+                        common_avg = df[available_common].mean().mean()
+                        track_data.append({'Track': 'Common Subjects', 'Average Score': common_avg, 'Color': '#F18F01'})
+                        
+                        # Individual subject scores for common subjects
+                        st.markdown("#### Common Subjects Details")
+                        common_scores = df[available_common].mean().sort_values(ascending=True)
+                        fig_common = go.Figure(go.Bar(
+                            x=common_scores.values,
+                            y=common_scores.index,
+                            orientation='h',
+                            marker_color='#F18F01',
+                            text=[f'{v:.1f}' for v in common_scores.values],
+                            textposition='auto'
+                        ))
+                        fig_common.update_layout(
+                            title="Common Subject Scores",
+                            xaxis_title="Average Score",
+                            yaxis_title="Subject",
+                            height=250
+                        )
+                        st.plotly_chart(fig_common, use_container_width=True, key="common_scores")
                     
-                    # Model performance for national exam prediction
-                    st.markdown("#### National Exam Score Prediction Model")
-                    st.markdown("""
-                    The National Exam Score prediction model achieved the following performance:
-                    
-                    | Model | R² Score | MAE | RMSE |
-                    |-------|----------|-----|------|
-                    | Gradient Boosting | 0.4380 | 0.0814 | 0.1071 |
-                    | XGBoost | 0.4353 | 0.0816 | 0.1074 |
-                    | Random Forest | 0.4258 | 0.0823 | 0.1083 |
-                    
-                    **Key Insights:**
-                    - **Score_x_Participation** is the most important predictor (73.6% importance)
-                    - **Homework completion** contributes 7.2% to exam performance
-                    - The model explains ~43.8% of variance in National Exam Scores
-                    """)
-                    
-                    # Feature importance visualization
-                    national_importance = pd.DataFrame({
-                        'Feature': ['Score_x_Participation', 'Overall_Avg_Homework', 'School_Academic_Score',
-                                   'Overall_Test_Score_Avg', 'Overall_Avg_Attendance', 'Overall_Avg_Participation'],
-                        'Importance': [0.7356, 0.0720, 0.0669, 0.0431, 0.0178, 0.0162]
-                    })
-                    national_importance = national_importance.sort_values('Importance', ascending=True)
-                    
-                    fig = go.Figure(go.Bar(
-                        x=national_importance['Importance'],
-                        y=national_importance['Feature'],
+                    # Horizontal bar chart for track comparison
+                    track_df = pd.DataFrame(track_data)
+                    fig_track = go.Figure(go.Bar(
+                        x=track_df['Average Score'],
+                        y=track_df['Track'],
                         orientation='h',
-                        marker_color='#A23B72',
-                        text=[f'{imp:.1%}' for imp in national_importance['Importance']],
+                        marker_color=track_df['Color'],
+                        text=track_df['Average Score'].round(1),
                         textposition='auto'
                     ))
-                    fig.update_layout(
-                        title="Feature Importance for National Exam Score Prediction",
-                        xaxis_title="Importance Score",
-                        yaxis_title="Features",
-                        height=400
+                    fig_track.update_layout(
+                        title="Track Performance Comparison",
+                        xaxis_title="Average Score",
+                        yaxis_title="Academic Track",
+                        height=300
                     )
-                    st.plotly_chart(fig, use_container_width=True, key="national_importance_chart")
-                    
-                else:
-                    st.warning("National exam score data not available in the dataset.")
+                    st.plotly_chart(fig_track, use_container_width=True, key="track_comparison")
+                
+                # ========================================================================
+                # MODEL PERFORMANCE METRICS
+                # ========================================================================
+                st.markdown("### 🤖 National Exam Prediction Model Performance")
+                st.markdown("*Model trained to predict national exam scores based on academic and demographic factors*")
+                
+                # Model performance comparison table
+                model_performance = pd.DataFrame({
+                    'Model': ['Gradient Boosting', 'XGBoost', 'Random Forest', 'Ridge Regression', 'Linear Regression', 'Lasso Regression'],
+                    'R² Score': [0.437061, 0.432566, 0.420462, 0.405090, 0.405089, 0.404188],
+                    'MAE': [0.081473, 0.081776, 0.082588, 0.083994, 0.083995, 0.083939],
+                    'RMSE': [0.107198, 0.107625, 0.108767, 0.110200, 0.110200, 0.110284]
+                })
+                
+                st.dataframe(model_performance, use_container_width=True, key="model_performance_table")
+                
+                # Best model highlight
+                st.markdown("""
+                <div class="success-box">
+                <strong>🏆 BEST MODEL: Gradient Boosting</strong><br>
+                • R² Score: 0.4371 (Explains 43.7% of variance)<br>
+                • MAE: 0.0815 (Average prediction error)<br>
+                • RMSE: 0.1072<br>
+                • <strong>Durbin-Watson Statistic: 2.00</strong> (~2 indicates independent residuals - good model fit)
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Feature Importance
+                st.markdown("#### Feature Importance - Gradient Boosting Model")
+                
+                feature_importance = pd.DataFrame({
+                    'Feature': [
+                        'Overall_Test_Score_Avg', 'Overall_Avg_Participation', 'Overall_Engagement_Score',
+                        'School_Academic_Score', 'Overall_Avg_Attendance', 'School_Resources_Score',
+                        'Parental_Involvement', 'Teacher_Student_Ratio', 'Student_to_Resources_Ratio',
+                        'Overall_Avg_Homework', 'School_Type_Target', 'Overall_Textbook_Access_Composite',
+                        'Field_Choice', 'Career_Interest_Encoded'
+                    ],
+                    'Importance': [0.418729, 0.232912, 0.190178, 0.090328, 0.016825, 0.015366,
+                                0.014162, 0.007387, 0.004941, 0.003189, 0.002499, 0.001734,
+                                0.001365, 0.000385],
+                    'Importance_%': [41.87, 23.29, 19.02, 9.03, 1.68, 1.54, 1.42, 0.74, 0.49, 0.32, 0.25, 0.17, 0.14, 0.04]
+                })
+                
+                # Sort for visualization
+                feature_importance = feature_importance.sort_values('Importance', ascending=True).tail(10)
+                
+                fig = go.Figure(go.Bar(
+                    x=feature_importance['Importance'],
+                    y=feature_importance['Feature'],
+                    orientation='h',
+                    marker_color='#A23B72',
+                    text=[f'{imp:.1%}' for imp in feature_importance['Importance']],
+                    textposition='auto'
+                ))
+                fig.update_layout(
+                    title="Top 10 Features Impacting National Exam Scores",
+                    xaxis_title="Importance Score",
+                    yaxis_title="Features",
+                    height=500,
+                    margin=dict(l=200)
+                )
+                st.plotly_chart(fig, use_container_width=True, key="feature_importance_chart")
+                
+                # Model Insights
+                st.markdown("#### Key Insights from National Exam Model")
+                st.markdown("""
+                <div class="info-box">
+                <strong>💡 Key Findings:</strong><br><br>
+                • <strong>Overall Test Score Average</strong> is the most important predictor (41.9% importance)<br>
+                • <strong>Student Participation</strong> contributes 23.3% to exam performance<br>
+                • <strong>Engagement Score</strong> (PCA-combined) explains 19.0% of variance<br>
+                • <strong>School Academic Score</strong> accounts for 9.0% of prediction power<br>
+                • Other factors (resources, involvement, ratio) have smaller but meaningful contributions<br>
+                • The model shows good fit with <strong>Durbin-Watson statistic of 2.00</strong> (independent residuals)
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Model Limitations
+                st.markdown("#### ⚠️ Model Limitations & Usage Notes")
+                st.markdown("""
+                <div class="warning-box">
+                <strong>Important Limitations:</strong><br><br>
+                • This model is designed for <strong>class-level and group analysis</strong>, not individual student prediction<br>
+                • Individual student predictions may have higher error margins (±10-15 points)<br>
+                • The model explains ~43.7% of variance, meaning over 56% is unexplained by available features<br>
+                • External factors (exam difficulty, test anxiety, preparation quality) are not captured<br>
+                • Use predictions as <strong>guidance for policy decisions</strong>, not as definitive outcomes<br>
+                • For individual student assessment, combine with teacher evaluations and other indicators
+                </div>
+                """, unsafe_allow_html=True)
                 
                 # Download report
-                national_summary = pd.DataFrame({
-                    'Metric': ['Social Science Track Avg', 'Natural Science Track Avg', 'Common Subjects Avg'],
-                    'Value': [
-                        f"{df['Social_Track_Avg'].mean():.1f}" if available_social else "N/A",
-                        f"{df['Natural_Track_Avg'].mean():.1f}" if available_natural else "N/A",
-                        f"{df['Common_Subjects_Avg'].mean():.1f}" if available_common else "N/A"
-                    ]
-                })
-                csv = national_summary.to_csv(index=False)
-                st.download_button("📥 Download National Exam Report (CSV)", csv, "national_exam_report.csv", "text/csv", key="download_national")
-            
+                st.markdown("---")
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    if st.button("📥 Download National Exam Report (CSV)", use_container_width=True, key="download_national"):
+                        # Create summary dataframe for download
+                        download_data = pd.DataFrame({
+                            'Metric': ['Total Students', 'High Performers (≥350)', 'Low Performers (<350)', 
+                                    'High Performer %', 'Average Score', 'Best Model', 'Model R²'],
+                            'Value': [
+                                f"{len(df):,}", f"{high_score_count:,}", f"{low_score_count:,}",
+                                f"{high_score_percentage:.1f}%", f"{df['Total_National_Exam_Score'].mean():.1f}",
+                                'Gradient Boosting', '0.4371'
+                            ]
+                        })
+                        csv = download_data.to_csv(index=False)
+                        st.download_button("📥 Download CSV", csv, "national_exam_report.csv", "text/csv", key="download_national_btn")
             # ========================================================================
             # SUMMARY STATISTICS
             # ========================================================================
