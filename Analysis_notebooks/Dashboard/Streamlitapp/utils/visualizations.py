@@ -8,6 +8,7 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
+from sklearn.metrics import roc_curve
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -216,18 +217,6 @@ class Visualizer:
             marker=dict(color=Visualizer.COLOR_SCHEME['primary'], size=6, opacity=0.6),
             name=f'{y_col} vs {x_col}'
         ))
-        
-        if len(plot_df) > 1 and plot_df[x_col].nunique() > 1:
-            z = np.polyfit(plot_df[x_col], plot_df[y_col], 1)
-            p = np.poly1d(z)
-            x_trend = np.linspace(plot_df[x_col].min(), plot_df[x_col].max(), 100)
-            fig.add_trace(go.Scatter(
-                x=x_trend,
-                y=p(x_trend),
-                mode='lines',
-                name='Trend Line',
-                line=dict(color=Visualizer.COLOR_SCHEME['secondary'], dash='dash')
-            ))
         
         fig.update_layout(
             title=f"{y_col} vs {x_col}",
@@ -461,7 +450,7 @@ class Visualizer:
 
 
 # ============================================================================
-# GLOBAL FUNCTIONS (for compatibility with existing app.py)
+# GLOBAL FUNCTIONS (for compatibility with __init__.py)
 # ============================================================================
 
 # Global variables
@@ -728,7 +717,6 @@ def create_roc_curve_plot():
     if classification_model is None or classification_model.get('y_test') is None:
         return go.Figure()
     
-    from sklearn.metrics import roc_curve
     fpr, tpr, _ = roc_curve(classification_model['y_test'], classification_model['y_probs'])
     roc_auc = classification_model['roc_auc']
     
