@@ -859,6 +859,8 @@ if selected_page == "📈 Overview":
     # See More Button for Power BI
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
+        st.markdown("---")
+        st.info("📈 **Drill down into student performance, risk heatmaps, and resource optimization analytics**")
         if st.button("🔍 Explore Interactive Power BI Dashboard", use_container_width=True, key="see_more_powerbi"):
             st.session_state.show_powerbi = not st.session_state.show_powerbi
 
