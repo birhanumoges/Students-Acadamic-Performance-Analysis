@@ -1345,18 +1345,18 @@ elif selected_page == "📊 Analytics":
         
         The model achieved a **R² score of 0.4380**, explaining 43.8% of the variance in national exam scores.
         """)
-        st.markdown('</div>', unsafe_allow_html=True)
-        # ============================================================================
-        # QUICK NAVIGATION BUTTON TO REPORTS PAGE
-        # ============================================================================
+        st.markdown("---")
 
-        # Add this button after the National Exam info box
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            if st.button("📊 View Full National Exam Report", type="primary", use_container_width=True):
-                st.session_state.page = "📋 Reports"
-                st.session_state.pre_selected_report = "National Exam Report"
-                st.rerun()
+        st.markdown("""
+            <div style="background-color: #1E3A8A; padding: 15px; border-radius: 8px; text-align: center;">
+                <h3 style="color: white; margin: 0;">
+                    📊 View Full National Exam Report
+                </h3>
+                <p style="color: #CBD5E1; margin: 8px 0 0 0;">
+                    Go to Report Page and select "National Exam Report" from the sidebar
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
     with tab3:
         # Show loading spinner only for this tab
         with st.spinner("Loading clustering visualizations..."):
