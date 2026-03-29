@@ -1066,3 +1066,24 @@ def create_regional_risk_plot():
         xaxis_tickangle=-45
     )
     return fig
+# =============================================================================
+# MODULE WRAPPERS FOR Visualizer STATIC METHODS (required by utils/__init__.py)
+# =============================================================================
+
+def create_correlation_heatmap(df):
+    return Visualizer.create_correlation_heatmap(df)
+
+def create_scatter_plot(df, x_col, y_col):
+    return Visualizer.create_scatter_plot(df, x_col, y_col)
+
+def create_boxplot(df, x_col, y_col):
+    return Visualizer.create_boxplot(df, x_col, y_col)
+
+def create_regression_comparison_plot(regression_metrics):
+    return Visualizer.create_regression_comparison_plot(regression_metrics)
+
+def create_feature_importance_plot(importance_dict, title="Feature Importance"):
+    return Visualizer.create_feature_importance_plot(importance_dict, title)
+
+def create_risk_gauge(risk_prob):
+    return Visualizer.create_risk_gauge(risk_prob)
