@@ -856,13 +856,24 @@ if selected_page == "📈 Overview":
     }
     st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
     
-    # See More Button for Power BI
     st.markdown("---")
-    st.info("📈 **Drill down into student performance, risk heatmaps, and resource optimization analytics**")
+
+    # Styled "See More" section
+    st.markdown("""
+        <div style="background-color: #1E40AF; padding: 18px; border-radius: 10px; text-align: center; margin-bottom: 10px;">
+            <h3 style="color: white; margin: 0 0 8px 0;">📈 Visualize Detailed Student Performance Insights</h3>
+            <p style="color: #E0F2FE; margin: 0;">Interactive analysis with charts and trends</p>
+            <div style="margin-top: 10px;">
+                <strong style="color: white;">👇 Click the button below to explore the interactive Power BI Dashboard</strong>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("🔍 Explore Interactive Power BI Dashboard", use_container_width=True, key="see_more_powerbi"):
+        if st.button("🔍 Explore Interactive Power BI Dashboard", 
+                    use_container_width=True, 
+                    key="see_more_powerbi"):
             st.session_state.show_powerbi = not st.session_state.show_powerbi
 
     if st.session_state.show_powerbi:
@@ -870,10 +881,10 @@ if selected_page == "📈 Overview":
         st.markdown("### 📊 Interactive Power BI Dashboard")
         st.caption("Visualize student performance, risk analysis, and resource allocation insights")
         
-        # Power BI Embed
         powerbi_embed_url = "https://app.powerbi.com/view?r=your_embed_url_here"
         st.components.v1.iframe(powerbi_embed_url, height=550, scrolling=True)
-        st.caption("📌 **Note:** Replace with your actual Power BI embed URL for live interactive dashboard")
+        
+        st.caption("📌 Note: Replace with your actual Power BI embed URL")
 # ============================================================================
 # PAGE: STUDENTS (with filters on right side) - USING TRAINED MODELS
 # ============================================================================
