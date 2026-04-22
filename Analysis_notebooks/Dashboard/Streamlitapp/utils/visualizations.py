@@ -11,6 +11,13 @@ from plotly.subplots import make_subplots
 from sklearn.metrics import roc_curve
 import warnings
 warnings.filterwarnings('ignore')
+import socketserver
+    
+# Monkey patch for SHAP (temporary fix for Streamlit)
+if not hasattr(socketserver, "UnixStreamServer"):
+    socketserver.UnixStreamServer = socketserver.TCPServer
+
+import shap
 
 
 class Visualizer:
