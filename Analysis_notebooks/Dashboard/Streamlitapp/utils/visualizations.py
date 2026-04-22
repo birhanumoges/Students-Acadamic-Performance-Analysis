@@ -108,31 +108,38 @@ class Visualizer:
     
     @staticmethod
     def create_region_bar(df):
-        """Create average score by region bar chart"""
-        if 'Region' not in df.columns or 'Overall_Average' not in df.columns:
+        """Create student count by region bar chart"""
+        if 'Region' not in df.columns:
             return go.Figure()
-        
-        region_avg = df.groupby('Region')['Overall_Average'].mean().sort_values()
-        
+
+        # Count students per region
+        region_counts = (
+            df.groupby('Region')
+            .size()
+            .sort_values(ascending=True)
+        )
+
         fig = go.Figure(data=[
             go.Bar(
-                x=region_avg.values,
-                y=region_avg.index,
+                x=region_counts.values,
+                y=region_counts.index,
                 orientation='h',
                 marker_color=Visualizer.COLOR_SCHEME['primary'],
-                text=[f'{v:.1f}' for v in region_avg.values],
+                text=[str(v) for v in region_counts.values],
                 textposition='auto'
             )
         ])
+
         fig.update_layout(
-            title="Average Score by Region",
-            xaxis_title="Average Score",
+            title="Number of Students by Region",
+            xaxis_title="Number of Students",
             yaxis_title="Region",
             plot_bgcolor=Visualizer.COLOR_SCHEME['background'],
             paper_bgcolor=Visualizer.COLOR_SCHEME['background'],
             height=500,
             margin=dict(l=120)
         )
+
         return fig
     
     @staticmethod
