@@ -802,24 +802,55 @@ if selected_page == "📈 Overview":
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("Average Score by Region")
-        region_avg = df.groupby('Region')['Overall_Average'].mean().sort_values()
-        fig = go.Figure(data=[
-            go.Bar(
-                x=region_avg.values,
-                y=region_avg.index,
-                orientation='h',
-                marker_color='#2E86AB',
-                text=[f'{v:.1f}' for v in region_avg.values],
-                textposition='auto'
+        st.subheader("Average Score and Student Count by Region")
+
+        region_stats = (
+            df.groupby('Region')
+            .agg(
+                Average_Score=('Overall_Average', 'mean'),
+                Student_Count=('Overall_Average', 'size')
             )
-        ])
-        fig.update_layout(
-            xaxis_title="Average Score",
-            yaxis_title="Region",
-            height=500,
-            margin=dict(l=150)
+            .sort_values('Average_Score')
         )
+
+        fig = go.Figure()
+
+        # Bar for average score
+        fig.add_trace(go.Bar(
+            x=region_stats['Average_Score'],
+            y=region_stats.index,
+            orientation='h',
+            name='Average Score',
+            marker_color="#51BDEC",
+            text=[f"{v:.1f}" for v in region_stats['Average_Score']],
+            textposition='auto'
+        ))
+
+        # Scatter for student count (secondary axis)
+        fig.add_trace(go.Scatter(
+            x=region_stats['Student_Count'],
+            y=region_stats.index,
+            mode='markers+text',
+            name='Student Count',
+            marker=dict(size=10, color="#01F149"),
+            text=[f"{v}" for v in region_stats['Student_Count']],
+            textposition='middle right',
+            xaxis='x2'
+        ))
+
+        fig.update_layout(
+            xaxis=dict(title='Average Score'),
+            xaxis2=dict(
+                title='Student Count',
+                overlaying='x',
+                side='top'
+            ),
+            yaxis_title='Region',
+            height=550,
+            margin=dict(l=150),
+            legend=dict(orientation='h')
+        )
+
         st.plotly_chart(fig, use_container_width=True, key="overview_region_bar")
     
     with col2:
