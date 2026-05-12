@@ -1,0 +1,22 @@
+<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .slide { opacity: 0; animation: fade 16s infinite; }
+    .s1 { animation-delay: 0s; }
+    .s2 { animation-delay: 4s; }
+    .s3 { animation-delay: 8s; }
+    .s4 { animation-delay: 12s; }
+
+    @keyframes fade {
+      0% {opacity:0}
+      6% {opacity:1}
+      24% {opacity:1}
+      30% {opacity:0}
+      100% {opacity:0}
+    }
+  </style>
+
+  <image href="assets/dash1.png" width="1000" height="600" class="slide s1"/>
+  <image href="assets/dash2.png" width="1000" height="600" class="slide s2"/>
+  <image href="assets/dash3.png" width="1000" height="600" class="slide s3"/>
+  <image href="assets/dash4.png" width="1000" height="600" class="slide s4"/>
+</svg>
