@@ -157,35 +157,27 @@
   <!-- Dark placeholder background -->
   <rect x="44" y="118" width="872" height="374" rx="10" fill="#0a0b1a"/>
 
-  <!-- Placeholder label shown until images load -->
-  <text x="480" y="302"
-        font-family="'Segoe UI',Arial,sans-serif"
-        font-size="13" fill="#ffffff" fill-opacity="0.1"
-        text-anchor="middle">
-    assets/dash1.png ‥ dash5.png
-  </text>
-
-  <!-- ── 5 IMAGES (stacked, JS fades between them) ── -->
+  <!-- ── 5 IMAGES (FIXED: removed slice, using contain) ── -->
   <g clip-path="url(#imgClip)">
     <image id="s1" href="assets/dash1.png"
            x="44" y="118" width="872" height="374"
-           preserveAspectRatio="xMidYMid slice"
+           preserveAspectRatio="xMidYMid meet"
            opacity="1"/>
     <image id="s2" href="assets/dash2.png"
            x="44" y="118" width="872" height="374"
-           preserveAspectRatio="xMidYMid slice"
+           preserveAspectRatio="xMidYMid meet"
            opacity="0"/>
     <image id="s3" href="assets/dash3.png"
            x="44" y="118" width="872" height="374"
-           preserveAspectRatio="xMidYMid slice"
+           preserveAspectRatio="xMidYMid meet"
            opacity="0"/>
     <image id="s4" href="assets/dash4.png"
            x="44" y="118" width="872" height="374"
-           preserveAspectRatio="xMidYMid slice"
+           preserveAspectRatio="xMidYMid meet"
            opacity="0"/>
     <image id="s5" href="assets/dash5.png"
            x="44" y="118" width="872" height="374"
-           preserveAspectRatio="xMidYMid slice"
+           preserveAspectRatio="xMidYMid meet"
            opacity="0"/>
   </g>
 
@@ -329,7 +321,6 @@
     }
 
     /* ── TRANSITION (cross-fade via CSS) ──────── */
-    /* SVG <image> transitions work in modern browsers  */
     function setOpacity(id, val, duration) {
       var el = $$(id);
       if (!el) return;
