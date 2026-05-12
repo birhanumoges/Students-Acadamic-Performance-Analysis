@@ -1,22 +1,99 @@
-<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+<svg width="900" height="500" viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg">
   <style>
-    .slide { opacity: 0; animation: fade 16s infinite; }
-    .s1 { animation-delay: 0s; }
-    .s2 { animation-delay: 4s; }
-    .s3 { animation-delay: 8s; }
-    .s4 { animation-delay: 12s; }
-
-    @keyframes fade {
-      0% {opacity:0}
-      6% {opacity:1}
-      24% {opacity:1}
-      30% {opacity:0}
-      100% {opacity:0}
+    @keyframes slide1 {
+      0%, 20% { opacity: 1; }
+      25%, 100% { opacity: 0; }
+    }
+    @keyframes slide2 {
+      0%, 20% { opacity: 0; }
+      25%, 45% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+    @keyframes slide3 {
+      0%, 45% { opacity: 0; }
+      50%, 70% { opacity: 1; }
+      75%, 100% { opacity: 0; }
+    }
+    @keyframes slide4 {
+      0%, 70% { opacity: 0; }
+      75%, 95% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    
+    .slide1 { animation: slide1 12s infinite; }
+    .slide2 { animation: slide2 12s infinite; }
+    .slide3 { animation: slide3 12s infinite; }
+    .slide4 { animation: slide4 12s infinite; }
+    
+    .dashboard-bg {
+      fill: #0f172a;
+      rx: 16;
+    }
+    
+    .dashboard-frame {
+      fill: #1e293b;
+      rx: 12;
+    }
+    
+    .title {
+      fill: #e2e8f0;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    
+    .caption {
+      fill: #94a3b8;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 13px;
     }
   </style>
-
-  <image href="assets/dash1.png" width="1000" height="600" class="slide s1"/>
-  <image href="assets/dash2.png" width="1000" height="600" class="slide s2"/>
-  <image href="assets/dash3.png" width="1000" height="600" class="slide s3"/>
-  <image href="assets/dash4.png" width="1000" height="600" class="slide s4"/>
+  
+  <!-- SLIDE 1 - Dashboard 1 -->
+  <g class="slide1">
+    <rect class="dashboard-bg" width="900" height="500"/>
+    <rect class="dashboard-frame" x="30" y="30" width="840" height="380"/>
+    <text class="title" x="450" y="70" text-anchor="middle">📊 Dashboard 1: Mental Health Trends</text>
+    
+    <!-- Replace 'assets/dash1.png' with YOUR actual image path -->
+    <image href="assets/dash1.png" x="50" y="90" width="800" height="300" preserveAspectRatio="xMidYMid meet"/>
+    
+    <text class="caption" x="450" y="475" text-anchor="middle">Figure 1: Monthly mental health trends across student population</text>
+  </g>
+  
+  <!-- SLIDE 2 - Dashboard 2 -->
+  <g class="slide2">
+    <rect class="dashboard-bg" width="900" height="500"/>
+    <rect class="dashboard-frame" x="30" y="30" width="840" height="380"/>
+    <text class="title" x="450" y="70" text-anchor="middle">📈 Dashboard 2: Academic Performance</text>
+    
+    <!-- Replace 'assets/dash2.png' with YOUR actual image path -->
+    <image href="assets/dash2.png" x="50" y="90" width="800" height="300" preserveAspectRatio="xMidYMid meet"/>
+    
+    <text class="caption" x="450" y="475" text-anchor="middle">Figure 2: Correlation between study hours and GPA</text>
+  </g>
+  
+  <!-- SLIDE 3 - Dashboard 3 -->
+  <g class="slide3">
+    <rect class="dashboard-bg" width="900" height="500"/>
+    <rect class="dashboard-frame" x="30" y="30" width="840" height="380"/>
+    <text class="title" x="450" y="70" text-anchor="middle">🏠 Dashboard 3: Environmental Factors</text>
+    
+    <!-- Replace 'assets/dash3.png' with YOUR actual image path -->
+    <image href="assets/dash3.png" x="50" y="90" width="800" height="300" preserveAspectRatio="xMidYMid meet"/>
+    
+    <text class="caption" x="450" y="475" text-anchor="middle">Figure 3: Impact of home environment on learning outcomes</text>
+  </g>
+  
+  <!-- SLIDE 4 - Dashboard 4 -->
+  <g class="slide4">
+    <rect class="dashboard-bg" width="900" height="500"/>
+    <rect class="dashboard-frame" x="30" y="30" width="840" height="380"/>
+    <text class="title" x="450" y="70" text-anchor="middle">👨‍👩‍👧 Dashboard 4: Parent Engagement</text>
+    
+    <!-- Replace 'assets/dash4.png' with YOUR actual image path -->
+    <image href="assets/dash4.png" x="50" y="90" width="800" height="300" preserveAspectRatio="xMidYMid meet"/>
+    
+    <text class="caption" x="450" y="475" text-anchor="middle">Figure 4: Parent involvement effects on student success</text>
+  </g>
 </svg>
