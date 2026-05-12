@@ -17,7 +17,7 @@ import base64, sys, textwrap
 from pathlib import Path
 
 # ── Config ────────────────────────────────────────────────────────────
-ASSETS_DIR  = Path("assets")
+ASSETS_DIR  = Path("Assets")
 OUTPUT_SVG  = Path("dashboard.svg")
 IMAGE_FILES = [ASSETS_DIR / f"dash{i}.png" for i in range(1, 6)]
 LABELS      = ["Overview", "Performance Trends", "Grade Distribution",
