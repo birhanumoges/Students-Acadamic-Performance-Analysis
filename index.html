@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ethiopian Student Performance Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #2ECC71;
+    --green-dark: #1a7a43;
+    --gold: #F4C430;
+    --red: #E53E3E;
+    --red-dark: #9b1c1c;
+    --bg: #0A0E14;
+    --bg2: #111720;
+    --bg3: #161d28;
+    --surface: #1a2332;
+    --surface2: #1f2b3d;
+    --border: rgba(46,204,113,0.15);
+    --text: #e8edf5;
+    --text-muted: #7a8fa8;
+    --accent: #2ECC71;
+    --font-display: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ─────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    opacity: 0.5;
+  }
+
+  /* ── GRID LINES ────────────────────────── */
+  .grid-bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(46,204,113,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(46,204,113,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .container { max-width: 1060px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* ── HERO ──────────────────────────────── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 80px 0 60px;
+    position: relative; overflow: hidden;
+  }
+
+  .hero-glow {
+    position: absolute; top: -200px; left: -200px;
+    width: 700px; height: 700px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(46,204,113,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    animation: pulse-glow 6s ease-in-out infinite;
+  }
+  .hero-glow2 {
+    position: absolute; bottom: -100px; right: -100px;
+    width: 500px; height: 500px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(244,196,48,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    animation: pulse-glow 8s ease-in-out infinite reverse;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.08); }
+  }
+
+  .flag-stripe {
+    display: flex; gap: 0; height: 5px; width: 120px;
+    border-radius: 3px; overflow: hidden;
+    margin-bottom: 28px;
+    animation: fade-in 0.6s ease both;
+  }
+  .flag-stripe span { flex: 1; }
+  .flag-stripe .green { background: #078930; }
+  .flag-stripe .yellow { background: #FCDD09; }
+  .flag-stripe .red { background: #DA121A; }
+
+  .hero-label {
+    font-family: var(--font-mono);
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--green); margin-bottom: 16px;
+    animation: fade-in 0.7s ease both 0.1s;
+  }
+
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.4rem, 5vw, 4.2rem);
+    font-weight: 800; line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: #fff;
+    animation: fade-in-up 0.8s ease both 0.2s;
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--green) 0%, #27ae60 50%, var(--gold) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  .hero-sub {
+    max-width: 640px; margin-top: 20px;
+    color: var(--text-muted); font-size: 16px; font-weight: 300;
+    animation: fade-in-up 0.8s ease both 0.35s;
+  }
+
+  .hero-meta {
+    display: flex; flex-wrap: wrap; gap: 24px; margin-top: 36px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+    animation: fade-in-up 0.8s ease both 0.45s;
+  }
+  .hero-meta span { display: flex; align-items: center; gap: 8px; }
+  .hero-meta .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; }
+
+  .badge-row {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 36px;
+    animation: fade-in-up 0.8s ease both 0.55s;
+  }
+  .badge {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 6px 14px; border-radius: 4px;
+    border: 1px solid; font-weight: 700;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .badge:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+  .badge-green { color: var(--green); border-color: rgba(46,204,113,0.35); background: rgba(46,204,113,0.08); }
+  .badge-gold  { color: var(--gold);  border-color: rgba(244,196,48,0.35);  background: rgba(244,196,48,0.08); }
+  .badge-red   { color: #fc8181;      border-color: rgba(252,129,129,0.35); background: rgba(252,129,129,0.08); }
+  .badge-blue  { color: #63b3ed;      border-color: rgba(99,179,237,0.35);  background: rgba(99,179,237,0.08); }
+
+  /* ── SCROLL NAV ────────────────────────── */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,14,20,0.85); backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 0;
+  }
+  .nav-inner {
+    display: flex; align-items: center; gap: 6px;
+    overflow-x: auto; scrollbar-width: none;
+    position: relative; z-index: 1;
+  }
+  .nav-inner::-webkit-scrollbar { display: none; }
+  .nav-link {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-muted);
+    padding: 6px 14px; border-radius: 4px; white-space: nowrap;
+    text-decoration: none; transition: color 0.2s, background 0.2s;
+    cursor: pointer;
+  }
+  .nav-link:hover, .nav-link.active {
+    color: var(--green); background: rgba(46,204,113,0.1);
+  }
+
+  /* ── SECTION ───────────────────────────── */
+  section { padding: 90px 0; }
+  section + section { border-top: 1px solid var(--border); }
+
+  .section-label {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: var(--green); margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: var(--font-display); font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 700; letter-spacing: -0.02em; color: #fff;
+    margin-bottom: 16px;
+  }
+  .section-desc {
+    color: var(--text-muted); max-width: 620px; margin-bottom: 48px;
+    font-size: 15px; font-weight: 300;
+  }
+
+  /* ── STAT CARDS ────────────────────────── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    margin-bottom: 48px;
+  }
+  .stat-card {
+    background: var(--surface); padding: 28px 24px;
+    transition: background 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--green), transparent);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.4s ease;
+  }
+  .stat-card:hover { background: var(--surface2); }
+  .stat-card:hover::before { transform: scaleX(1); }
+  .stat-value {
+    font-family: var(--font-display); font-size: 2.2rem;
+    font-weight: 800; color: #fff; line-height: 1;
+    margin-bottom: 6px;
+  }
+  .stat-value.green { color: var(--green); }
+  .stat-value.gold  { color: var(--gold); }
+  .stat-value.red   { color: #fc8181; }
+  .stat-label {
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-muted); font-family: var(--font-mono);
+  }
+
+  /* ── METHODOLOGY PIPELINE ─────────────── */
+  .pipeline {
+    display: flex; gap: 0; overflow-x: auto;
+    scrollbar-width: thin; scrollbar-color: var(--green) var(--bg2);
+    padding-bottom: 12px;
+  }
+  .pipeline-step {
+    flex: 0 0 auto; min-width: 160px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-right: none; padding: 28px 20px;
+    position: relative; transition: background 0.3s;
+  }
+  .pipeline-step:first-child { border-radius: 10px 0 0 10px; }
+  .pipeline-step:last-child  { border-radius: 0 10px 10px 0; border-right: 1px solid var(--border); }
+  .pipeline-step:hover { background: var(--surface2); }
+  .pipeline-step::after {
+    content: '›'; position: absolute; right: -14px; top: 50%; transform: translateY(-50%);
+    color: var(--green); font-size: 22px; z-index: 2;
+  }
+  .pipeline-step:last-child::after { display: none; }
+  .step-num {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--green); margin-bottom: 10px; letter-spacing: 2px;
+  }
+  .step-name {
+    font-family: var(--font-display); font-weight: 700; font-size: 14px;
+    color: #fff; margin-bottom: 8px;
+  }
+  .step-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+
+  /* ── MODELS TABLE ──────────────────────── */
+  .model-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .model-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 28px;
+    transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+    cursor: default;
+  }
+  .model-card:hover {
+    border-color: rgba(46,204,113,0.4);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(46,204,113,0.15);
+  }
+  .model-card.winner { border-color: rgba(46,204,113,0.5); }
+  .model-card.winner .model-name::after {
+    content: '★ BEST'; font-size: 9px; letter-spacing: 1.5px;
+    background: var(--green); color: #000; padding: 2px 7px; border-radius: 3px;
+    margin-left: 10px; vertical-align: middle; font-family: var(--font-mono);
+  }
+  .model-name {
+    font-family: var(--font-display); font-weight: 700; font-size: 17px;
+    color: #fff; margin-bottom: 20px;
+  }
+  .model-metrics { display: flex; flex-direction: column; gap: 12px; }
+  .metric-row { display: flex; align-items: center; gap: 12px; }
+  .metric-key {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px;
+    color: var(--text-muted); width: 45px; flex-shrink: 0;
+  }
+  .metric-bar-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden; }
+  .metric-bar {
+    height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, var(--green), #27ae60);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 1s cubic-bezier(0.22,1,0.36,1);
+  }
+  .metric-bar.animated { transform: scaleX(1); }
+  .metric-val {
+    font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+    color: var(--green); width: 45px; text-align: right;
+  }
+
+  /* ── SHAP IMPORTANCE BAR ───────────────── */
+  .shap-list { display: flex; flex-direction: column; gap: 14px; }
+  .shap-item { display: flex; align-items: center; gap: 16px; }
+  .shap-rank {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-muted); width: 20px; text-align: center;
+  }
+  .shap-icon { font-size: 18px; width: 28px; text-align: center; }
+  .shap-name {
+    font-size: 14px; color: var(--text); width: 220px;
+  }
+  .shap-bar-wrap { flex: 1; height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+  .shap-bar {
+    height: 100%; border-radius: 4px;
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 1.2s cubic-bezier(0.22,1,0.36,1);
+  }
+  .shap-bar.animated { transform: scaleX(1); }
+  .shap-pct {
+    font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+    width: 48px; text-align: right;
+  }
+
+  /* ── CLUSTER CARDS ─────────────────────── */
+  .cluster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+  .cluster-card {
+    border-radius: 12px; padding: 32px;
+    border: 1px solid transparent;
+    position: relative; overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .cluster-card:hover { transform: translateY(-5px); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+  .cluster-card.low    { background: linear-gradient(135deg, #1a0f0f 0%, #1f1212 100%); border-color: rgba(229,62,62,0.3); }
+  .cluster-card.medium { background: linear-gradient(135deg, #0f1a12 0%, #121f14 100%); border-color: rgba(244,196,48,0.3); }
+  .cluster-card.high   { background: linear-gradient(135deg, #0d1520 0%, #0f1b2a 100%); border-color: rgba(46,204,113,0.3); }
+  .cluster-tier {
+    font-family: var(--font-display); font-size: 1.8rem; font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .cluster-card.low    .cluster-tier { color: #fc8181; }
+  .cluster-card.medium .cluster-tier { color: var(--gold); }
+  .cluster-card.high   .cluster-tier { color: var(--green); }
+  .cluster-size {
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+    margin-bottom: 24px;
+  }
+  .cluster-stats { display: flex; flex-direction: column; gap: 10px; }
+  .cs-row { display: flex; justify-content: space-between; font-size: 13px; }
+  .cs-key { color: var(--text-muted); }
+  .cs-val { font-family: var(--font-mono); font-weight: 700; }
+  .cluster-card.low    .cs-val { color: #fc8181; }
+  .cluster-card.medium .cs-val { color: var(--gold); }
+  .cluster-card.high   .cs-val { color: var(--green); }
+
+  /* ── REGIONAL HEATMAP ──────────────────── */
+  .region-table { width: 100%; border-collapse: collapse; }
+  .region-table th {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-muted);
+    padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border);
+  }
+  .region-table td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .region-table tr:hover td { background: rgba(255,255,255,0.03); }
+  .region-name { font-weight: 500; color: var(--text); }
+  .heat-cell {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 12px;
+  }
+  .heat-block { width: 60px; height: 8px; border-radius: 2px; }
+
+  /* ── RECOMMENDATIONS ───────────────────── */
+  .recs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+  .rec-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 28px;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .rec-card:hover { border-color: rgba(46,204,113,0.35); transform: translateY(-3px); }
+  .rec-icon { font-size: 28px; margin-bottom: 14px; }
+  .rec-title { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: #fff; margin-bottom: 10px; }
+  .rec-desc { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+  .rec-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+  .rec-tag {
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--green);
+    background: rgba(46,204,113,0.1); padding: 3px 9px; border-radius: 3px;
+  }
+
+  /* ── LIMITATIONS ───────────────────────── */
+  .lim-list { display: flex; flex-direction: column; gap: 12px; }
+  .lim-item {
+    display: flex; gap: 16px; align-items: flex-start;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px 20px;
+  }
+  .lim-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+  .lim-text { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+  .lim-text strong { color: var(--text); }
+
+  /* ── TECH STACK ────────────────────────── */
+  .tech-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .tech-pill {
+    font-family: var(--font-mono); font-size: 11px;
+    padding: 8px 16px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--text-muted); transition: color 0.2s, border-color 0.2s, background 0.2s;
+    cursor: default;
+  }
+  .tech-pill:hover { color: var(--green); border-color: rgba(46,204,113,0.35); background: rgba(46,204,113,0.06); }
+
+  /* ── REPO STRUCTURE ────────────────────── */
+  .repo-tree {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 28px 32px;
+    font-family: var(--font-mono); font-size: 13px; line-height: 2;
+    color: var(--text-muted);
+  }
+  .repo-tree .folder { color: var(--gold); }
+  .repo-tree .file   { color: var(--text-muted); }
+  .repo-tree .main   { color: var(--green); font-weight: 700; }
+  .repo-tree .comment { color: #3d4f62; }
+
+  /* ── AUTHOR CARD ───────────────────────── */
+  .author-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 40px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
+    align-items: start;
+  }
+  @media (max-width: 640px) { .author-card { grid-template-columns: 1fr; } }
+  .author-name { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; color: #fff; }
+  .author-role { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+  .author-detail { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-top: 20px; line-height: 2.2; }
+  .author-detail span { color: var(--text); }
+
+  /* ── FOOTER ────────────────────────────── */
+  footer {
+    padding: 40px 0;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
+    position: relative; z-index: 1;
+  }
+  footer .footer-logo {
+    font-family: var(--font-display); font-size: 1.1rem; font-weight: 800;
+    color: var(--green); margin-bottom: 12px;
+    display: block;
+  }
+
+  /* ── ANIMATIONS ────────────────────────── */
+  @keyframes fade-in {
+    from { opacity: 0; } to { opacity: 1; }
+  }
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .reveal {
+    opacity: 0; transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  /* ── DIVIDER ───────────────────────────── */
+  .divider {
+    height: 1px; background: linear-gradient(90deg, transparent, var(--green), transparent);
+    margin: 0; opacity: 0.3;
+  }
+
+  /* ── INLINE TABLE ──────────────────────── */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-muted);
+    padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .data-table td {
+    padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 13px;
+  }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .data-table td:first-child { font-weight: 500; color: var(--text); }
+  .data-table td:last-child { font-family: var(--font-mono); color: var(--green); }
+
+  /* ── TOOLTIP ───────────────────────────── */
+  [data-tip] { position: relative; cursor: help; border-bottom: 1px dashed rgba(46,204,113,0.4); }
+  [data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-size: 12px; padding: 6px 12px; border-radius: 6px;
+    white-space: nowrap; z-index: 10;
+  }
+
+  /* ── MOBILE ────────────────────────────── */
+  @media (max-width: 640px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .pipeline { gap: 10px; }
+    .pipeline-step { min-width: 130px; }
+    .pipeline-step::after { display: none; }
+    .shap-name { width: 130px; font-size: 12px; }
+  }
+
+  /* ── INTERACTIVE TOGGLE ────────────────── */
+  .tabs { display: flex; gap: 2px; margin-bottom: 28px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 4px; width: fit-content; }
+  .tab {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 1px;
+    text-transform: uppercase; padding: 8px 18px; border-radius: 6px;
+    cursor: pointer; color: var(--text-muted); transition: all 0.2s;
+  }
+  .tab.active { background: var(--green); color: #000; font-weight: 700; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<!-- ── STICKY NAV ── -->
+<nav class="nav">
+  <div class="container">
+    <div class="nav-inner">
+      <a class="nav-link active" onclick="scrollTo('overview')">Overview</a>
+      <a class="nav-link" onclick="scrollTo('dataset')">Dataset</a>
+      <a class="nav-link" onclick="scrollTo('methodology')">Methodology</a>
+      <a class="nav-link" onclick="scrollTo('models')">Models</a>
+      <a class="nav-link" onclick="scrollTo('shap')">SHAP</a>
+      <a class="nav-link" onclick="scrollTo('clusters')">Clusters</a>
+      <a class="nav-link" onclick="scrollTo('regions')">Regions</a>
+      <a class="nav-link" onclick="scrollTo('recommendations')">Recommendations</a>
+      <a class="nav-link" onclick="scrollTo('author')">Author</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<header class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+  <div class="container">
+    <div class="flag-stripe"><span class="green"></span><span class="yellow"></span><span class="red"></span></div>
+    <div class="hero-label">Internship Report · Ethiopian Statistics Service · 2026</div>
+    <h1><em>Ethiopian Student</em><br>Performance Analytics</h1>
+    <p class="hero-sub">Predictive Modeling, Clustering &amp; Explainable AI applied to 100,000 students across 13 regions — powering evidence-based educational policy.</p>
+    <div class="hero-meta">
+      <span><span class="dot"></span> 100,000 Students</span>
+      <span><span class="dot"></span> 634 Attributes</span>
+      <span><span class="dot"></span> Grades 1–12</span>
+      <span><span class="dot"></span> 13 Regions</span>
+    </div>
+    <div class="badge-row">
+      <span class="badge badge-green">R² = 0.785</span>
+      <span class="badge badge-blue">AUC = 0.916</span>
+      <span class="badge badge-gold">96.7% Dim. Reduction</span>
+      <span class="badge badge-red">39.4% At-Risk Students</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── OVERVIEW ── -->
+<section id="overview">
+  <div class="container">
+    <div class="section-label">01 — Project Overview</div>
+    <h2 class="section-title">A Paradigm Shift in<br>Educational Intelligence</h2>
+    <p class="section-desc">This framework transforms raw educational data into actionable policy intelligence, enabling early warning systems and evidence-based resource allocation across Ethiopia.</p>
+
+    <div class="stats-grid reveal">
+      <div class="stat-card">
+        <div class="stat-value green">100K</div>
+        <div class="stat-label">Student Records</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">634</div>
+        <div class="stat-label">Raw Features</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value gold">25–30</div>
+        <div class="stat-label">Engineered Features</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">1024MB</div>
+        <div class="stat-label">→ 27.5 MB Memory</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value green">96.7%</div>
+        <div class="stat-label">Dimensionality Reduction</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value red">91.6%</div>
+        <div class="stat-label">Grade 12 Failure Rate</div>
+      </div>
+    </div>
+
+    <div class="reveal" style="background:var(--surface); border:1px solid rgba(229,62,62,0.25); border-radius:10px; padding:28px 32px; border-left:3px solid #E53E3E; max-width:760px;">
+      <div style="font-family:var(--font-mono); font-size:10px; letter-spacing:2px; color:#fc8181; margin-bottom:10px;">⚠ CONTEXT — EDUCATIONAL CRISIS</div>
+      <p style="color:var(--text); font-size:14px; line-height:1.8;">Only <strong style="color:#fc8181">8.4%</strong> of 581,905 students passed the 2025 Grade 12 entrance exam. A <strong style="color:#fc8181">27.7 percentage point</strong> mathematics achievement gap exists between Addis Ababa (62.4%) and Afar (34.7%). Over 1,200 schools recorded <strong style="color:#fc8181">zero passes</strong>. This project directly addresses these systemic failures.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── DATASET ── -->
+<section id="dataset">
+  <div class="container">
+    <div class="section-label">02 — Dataset</div>
+    <h2 class="section-title">High-Dimensional Educational Data</h2>
+    <p class="section-desc">A cross-sectional dataset capturing each student's full academic journey from Grades 1 through 12 across five attribute categories.</p>
+
+    <div class="reveal" style="overflow:hidden; border-radius:10px; border:1px solid var(--border);">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Attribute Category</th>
+            <th>Columns</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Test Score Columns</td><td>121</td><td>Subject-level scores per grade, Grades 1–12</td></tr>
+          <tr><td>Attendance Columns</td><td>120</td><td>Per-subject attendance records</td></tr>
+          <tr><td>Homework Columns</td><td>120</td><td>Homework completion rates</td></tr>
+          <tr><td>Participation Columns</td><td>120</td><td>Class participation levels</td></tr>
+          <tr><td>Textbook Access Columns</td><td>120</td><td>Resource availability indicators</td></tr>
+          <tr><td>Demographic &amp; Contextual</td><td>33</td><td>Region, gender, family, school type, health</td></tr>
+          <tr><td><strong>Total</strong></td><td><strong>634</strong></td><td>Covering 13 regions, all grade levels</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:32px;" class="reveal">
+      <div class="section-label" style="margin-bottom:12px;">Curriculum Stages</div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:12px;">
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; border-top:2px solid var(--green);">
+          <div style="font-family:var(--font-mono); font-size:10px; color:var(--green); margin-bottom:6px;">STAGE 1</div>
+          <div style="font-family:var(--font-display); font-weight:700; color:#fff; margin-bottom:4px;">Lower Primary</div>
+          <div style="font-size:12px; color:var(--text-muted);">Grades 1–4 · English, Amharic, Math, Art, HPE, Env. Sci.</div>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; border-top:2px solid var(--gold);">
+          <div style="font-family:var(--font-mono); font-size:10px; color:var(--gold); margin-bottom:6px;">STAGE 2</div>
+          <div style="font-family:var(--font-display); font-weight:700; color:#fff; margin-bottom:4px;">Upper Primary</div>
+          <div style="font-size:12px; color:var(--text-muted);">Grades 5–8 · Social Sci., Natural Sci., Civics &amp; Ethics added</div>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; border-top:2px solid #63b3ed;">
+          <div style="font-family:var(--font-mono); font-size:10px; color:#63b3ed; margin-bottom:6px;">STAGE 3</div>
+          <div style="font-family:var(--font-display); font-weight:700; color:#fff; margin-bottom:4px;">Secondary</div>
+          <div style="font-size:12px; color:var(--text-muted);">Grades 9–10 · Bio, Physics, Chemistry, ICT, History, Geo</div>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px; border-top:2px solid #fc8181;">
+          <div style="font-family:var(--font-mono); font-size:10px; color:#fc8181; margin-bottom:6px;">STAGE 4</div>
+          <div style="font-family:var(--font-display); font-weight:700; color:#fff; margin-bottom:4px;">Preparatory</div>
+          <div style="font-size:12px; color:var(--text-muted);">Grades 11–12 · Stream-specific Natural &amp; Social Science tracks</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── METHODOLOGY ── -->
+<section id="methodology">
+  <div class="container">
+    <div class="section-label">03 — Methodology</div>
+    <h2 class="section-title">CRISP-DM Framework</h2>
+    <p class="section-desc">A rigorous six-phase data mining process ensuring reproducibility, methodological consistency, and policy-grade validation.</p>
+
+    <div class="pipeline reveal">
+      <div class="pipeline-step">
+        <div class="step-num">01 /</div>
+        <div class="step-name">Data Understanding</div>
+        <div class="step-desc">EDA of 100K × 634 attributes. Column classification &amp; missing-value assessment.</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">02 /</div>
+        <div class="step-name">Data Preparation</div>
+        <div class="step-desc">Stage aggregation, categorical encoding, composite feature engineering.</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">03 /</div>
+        <div class="step-name">Modeling</div>
+        <div class="step-desc">Regression, classification, clustering with hyperparameter tuning.</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">04 /</div>
+        <div class="step-name">Evaluation</div>
+        <div class="step-desc">R², MAE, RMSE, AUC, F1, Silhouette. 5-fold CV &amp; SHAP.</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">05 /</div>
+        <div class="step-name">Dashboard</div>
+        <div class="step-desc">Interactive prototype, policy recommendations, codebase docs.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:48px;" class="reveal">
+      <div style="font-family:var(--font-mono); font-size:11px; letter-spacing:2px; color:var(--gold); margin-bottom:20px; text-transform:uppercase;">Feature Engineering — Encoding Strategy</div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px;">
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px;">
+          <div style="font-weight:700; color:#fff; margin-bottom:8px; font-family:var(--font-display);">Binary Encoding</div>
+          <div style="font-size:12px; color:var(--text-muted);">Gender, Internet Access, Electricity, School Location, Health Flag</div>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px;">
+          <div style="font-weight:700; color:#fff; margin-bottom:8px; font-family:var(--font-display);">Ordinal Encoding</div>
+          <div style="font-size:12px; color:var(--text-muted);">Parental Education (0–4), Health Issue Severity (0–3)</div>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px;">
+          <div style="font-weight:700; color:#fff; margin-bottom:8px; font-family:var(--font-display);">Smoothed Target Encoding</div>
+          <div style="font-size:12px; color:var(--text-muted);">Region (13 cats.), Career Interest (123 cats.) — α = 10 prevents leakage</div>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:20px;">
+          <div style="font-weight:700; color:#fff; margin-bottom:8px; font-family:var(--font-display);">PCA Engagement Score</div>
+          <div style="font-size:12px; color:var(--text-muted);">1st principal component of attendance, homework, &amp; participation → 0–100 scale</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MODELS ── -->
+<section id="models">
+  <div class="container">
+    <div class="section-label">04 — Predictive Models</div>
+    <h2 class="section-title">Four Analytical Components</h2>
+    <p class="section-desc">Supervised regression, classification, and unsupervised clustering — each validated with cross-validation and SHAP interpretability.</p>
+
+    <div class="tabs reveal">
+      <div class="tab active" onclick="switchTab('overall')">Overall Average</div>
+      <div class="tab" onclick="switchTab('national')">National Exam</div>
+      <div class="tab" onclick="switchTab('risk')">Risk Classification</div>
+    </div>
+
+    <div id="tab-overall" class="tab-content active reveal">
+      <div class="model-cards">
+        <div class="model-card winner">
+          <div class="model-name">Gradient Boosting</div>
+          <div class="model-metrics">
+            <div class="metric-row">
+              <span class="metric-key">R²</span>
+              <div class="metric-bar-wrap"><div class="metric-bar" style="width:78.5%"></div></div>
+              <span class="metric-val">0.785</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-key">MAE</span>
+              <div class="metric-bar-wrap"><div class="metric-bar" style="width:92%; background:linear-gradient(90deg,var(--gold),#d4a017)"></div></div>
+              <span class="metric-val" style="color:var(--gold)">2.99</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-key">RMSE</span>
+              <div class="metric-bar-wrap"><div class="metric-bar" style="width:88%; background:linear-gradient(90deg,#63b3ed,#3182ce)"></div></div>
+              <span class="metric-val" style="color:#63b3ed">3.73</span>
+            </div>
+          </div>
+        </div>
+        <div class="model-card">
+          <div class="model-name">XGBoost</div>
+          <div class="model-metrics">
+            <div class="metric-row"><span class="metric-key">R²</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:78.5%"></div></div><span class="metric-val">0.785</span></div>
+            <div class="metric-row"><span class="metric-key">MAE</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:91.5%; background:linear-gradient(90deg,var(--gold),#d4a017)"></div></div><span class="metric-val" style="color:var(--gold)">2.98</span></div>
+            <div class="metric-row"><span class="metric-key">RMSE</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:88%; background:linear-gradient(90deg,#63b3ed,#3182ce)"></div></div><span class="metric-val" style="color:#63b3ed">3.73</span></div>
+          </div>
+        </div>
+        <div class="model-card">
+          <div class="model-name">Random Forest</div>
+          <div class="model-metrics">
+            <div class="metric-row"><span class="metric-key">R²</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:77.2%"></div></div><span class="metric-val">0.772</span></div>
+            <div class="metric-row"><span class="metric-key">MAE</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:89%; background:linear-gradient(90deg,var(--gold),#d4a017)"></div></div><span class="metric-val" style="color:var(--gold)">3.07</span></div>
+            <div class="metric-row"><span class="metric-key">RMSE</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:86%; background:linear-gradient(90deg,#63b3ed,#3182ce)"></div></div><span class="metric-val" style="color:#63b3ed">3.84</span></div>
+          </div>
+        </div>
+        <div class="model-card">
+          <div class="model-name">Linear Regression</div>
+          <div class="model-metrics">
+            <div class="metric-row"><span class="metric-key">R²</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:76.9%"></div></div><span class="metric-val">0.769</span></div>
+            <div class="metric-row"><span class="metric-key">MAE</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:88%; background:linear-gradient(90deg,var(--gold),#d4a017)"></div></div><span class="metric-val" style="color:var(--gold)">3.10</span></div>
+            <div class="metric-row"><span class="metric-key">RMSE</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:85%; background:linear-gradient(90deg,#63b3ed,#3182ce)"></div></div><span class="metric-val" style="color:#63b3ed">3.86</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:16px 20px; background:rgba(46,204,113,0.07); border:1px solid rgba(46,204,113,0.2); border-radius:8px; font-size:13px; color:var(--text-muted);">
+        ✓ &nbsp; <strong style="color:var(--text)">Cross-validation:</strong> Mean CV R² = 0.783 (σ = 0.0022) — Train/Test gap of only 1.1%, confirming excellent generalization.
+      </div>
+    </div>
+
+    <div id="tab-national" class="tab-content">
+      <div class="model-cards">
+        <div class="model-card winner">
+          <div class="model-name">Gradient Boosting</div>
+          <div class="model-metrics">
+            <div class="metric-row"><span class="metric-key">R²</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:43.7%"></div></div><span class="metric-val">0.437</span></div>
+            <div class="metric-row"><span class="metric-key">MAE</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:97%; background:linear-gradient(90deg,var(--gold),#d4a017)"></div></div><span class="metric-val" style="color:var(--gold)">0.081</span></div>
+          </div>
+          <div style="margin-top:16px; font-size:12px; color:var(--text-muted);">≈ ±24.74 pts on original 1–700 scale (8.3% of range)</div>
+        </div>
+        <div class="model-card">
+          <div class="model-name">XGBoost</div>
+          <div class="model-metrics">
+            <div class="metric-row"><span class="metric-key">R²</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:43.3%"></div></div><span class="metric-val">0.433</span></div>
+            <div class="metric-row"><span class="metric-key">MAE</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:96%; background:linear-gradient(90deg,var(--gold),#d4a017)"></div></div><span class="metric-val" style="color:var(--gold)">0.082</span></div>
+          </div>
+        </div>
+        <div class="model-card">
+          <div class="model-name">Random Forest</div>
+          <div class="model-metrics">
+            <div class="metric-row"><span class="metric-key">R²</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:42%"></div></div><span class="metric-val">0.420</span></div>
+            <div class="metric-row"><span class="metric-key">MAE</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:96%; background:linear-gradient(90deg,var(--gold),#d4a017)"></div></div><span class="metric-val" style="color:var(--gold)">0.082</span></div>
+          </div>
+        </div>
+        <div class="model-card">
+          <div class="model-name">Linear / Ridge / Lasso</div>
+          <div class="model-metrics">
+            <div class="metric-row"><span class="metric-key">R²</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:40.5%"></div></div><span class="metric-val">0.405</span></div>
+            <div class="metric-row"><span class="metric-key">MAE</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:95%; background:linear-gradient(90deg,var(--gold),#d4a017)"></div></div><span class="metric-val" style="color:var(--gold)">0.084</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:16px 20px; background:rgba(99,179,237,0.07); border:1px solid rgba(99,179,237,0.2); border-radius:8px; font-size:13px; color:var(--text-muted);">
+        ℹ &nbsp; <strong style="color:var(--text)">Note:</strong> Target log-transformed to reduce skew (−0.68 → −0.21). R² of 0.437 falls within the expected 0.35–0.70 range for standardized exam prediction in literature.
+      </div>
+    </div>
+
+    <div id="tab-risk" class="tab-content">
+      <div class="model-cards">
+        <div class="model-card winner">
+          <div class="model-name">Gradient Boosting</div>
+          <div class="model-metrics">
+            <div class="metric-row"><span class="metric-key">AUC</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:91.6%"></div></div><span class="metric-val">0.916</span></div>
+            <div class="metric-row"><span class="metric-key">F1</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:77.8%"></div></div><span class="metric-val">0.778</span></div>
+            <div class="metric-row"><span class="metric-key">Prec.</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:84%; background:linear-gradient(90deg,var(--gold),#d4a017)"></div></div><span class="metric-val" style="color:var(--gold)">0.84</span></div>
+            <div class="metric-row"><span class="metric-key">Recall</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:83%; background:linear-gradient(90deg,#fc8181,#c53030)"></div></div><span class="metric-val" style="color:#fc8181">0.83</span></div>
+          </div>
+        </div>
+        <div class="model-card">
+          <div class="model-name">Random Forest</div>
+          <div class="model-metrics">
+            <div class="metric-row"><span class="metric-key">AUC</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:91.1%"></div></div><span class="metric-val">0.911</span></div>
+            <div class="metric-row"><span class="metric-key">F1</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:77.5%"></div></div><span class="metric-val">0.775</span></div>
+            <div class="metric-row"><span class="metric-key">Prec.</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:73%; background:linear-gradient(90deg,var(--gold),#d4a017)"></div></div><span class="metric-val" style="color:var(--gold)">0.73</span></div>
+            <div class="metric-row"><span class="metric-key">Recall</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:82%; background:linear-gradient(90deg,#fc8181,#c53030)"></div></div><span class="metric-val" style="color:#fc8181">0.82</span></div>
+          </div>
+        </div>
+        <div class="model-card">
+          <div class="model-name">Logistic Regression</div>
+          <div class="model-metrics">
+            <div class="metric-row"><span class="metric-key">AUC</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:88.9%"></div></div><span class="metric-val">0.889</span></div>
+            <div class="metric-row"><span class="metric-key">F1</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:74.3%"></div></div><span class="metric-val">0.743</span></div>
+            <div class="metric-row"><span class="metric-key">Prec.</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:71%; background:linear-gradient(90deg,var(--gold),#d4a017)"></div></div><span class="metric-val" style="color:var(--gold)">0.71</span></div>
+            <div class="metric-row"><span class="metric-key">Recall</span><div class="metric-bar-wrap"><div class="metric-bar" style="width:78%; background:linear-gradient(90deg,#fc8181,#c53030)"></div></div><span class="metric-val" style="color:#fc8181">0.78</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:16px 20px; background:rgba(252,129,129,0.07); border:1px solid rgba(252,129,129,0.2); border-radius:8px; font-size:13px; color:var(--text-muted);">
+        ✓ &nbsp; <strong style="color:var(--text)">SMOTE applied</strong> to training set only — balancing 63.5% / 36.5% class split to 50/50 without leaking into evaluation.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SHAP ── -->
+<section id="shap">
+  <div class="container">
+    <div class="section-label">05 — Explainability (SHAP)</div>
+    <h2 class="section-title">What Drives<br>Student Performance?</h2>
+    <p class="section-desc">SHAP (SHapley Additive exPlanations) quantifies each feature's contribution to model predictions — turning black-box ML into policy-actionable insights.</p>
+
+    <div class="shap-list reveal" id="shap-list">
+      <div class="shap-item">
+        <div class="shap-rank">01</div>
+        <div class="shap-icon">🏫</div>
+        <div class="shap-name"><span data-tip="Aggregates textbooks, labs, libraries, internet, electricity, classrooms">School Resources Score</span></div>
+        <div class="shap-bar-wrap"><div class="shap-bar" style="width:67.8%; background:linear-gradient(90deg, var(--green), #27ae60);"></div></div>
+        <div class="shap-pct" style="color:var(--green)">67.8%</div>
+      </div>
+      <div class="shap-item">
+        <div class="shap-rank">02</div>
+        <div class="shap-icon">📊</div>
+        <div class="shap-name"><span data-tip="PCA of attendance, homework & participation (0–100)">Overall Engagement Score</span></div>
+        <div class="shap-bar-wrap"><div class="shap-bar" style="width:17.8%; background:linear-gradient(90deg, var(--gold), #d4a017);"></div></div>
+        <div class="shap-pct" style="color:var(--gold)">17.8%</div>
+      </div>
+      <div class="shap-item">
+        <div class="shap-rank">03</div>
+        <div class="shap-icon">❤️</div>
+        <div class="shap-name">Health Issue Flag</div>
+        <div class="shap-bar-wrap"><div class="shap-bar" style="width:5.2%; background:linear-gradient(90deg, #fc8181, #c53030);"></div></div>
+        <div class="shap-pct" style="color:#fc8181">5.2%</div>
+      </div>
+      <div class="shap-item">
+        <div class="shap-rank">04</div>
+        <div class="shap-icon">📅</div>
+        <div class="shap-name">Overall Avg Attendance</div>
+        <div class="shap-bar-wrap"><div class="shap-bar" style="width:4.5%; background:linear-gradient(90deg, #63b3ed, #3182ce);"></div></div>
+        <div class="shap-pct" style="color:#63b3ed">4.5%</div>
+      </div>
+      <div class="shap-item">
+        <div class="shap-rank">05</div>
+        <div class="shap-icon">✏️</div>
+        <div class="shap-name">Overall Avg Homework</div>
+        <div class="shap-bar-wrap"><div class="shap-bar" style="width:3.7%; background:linear-gradient(90deg, #b794f4, #6b46c1);"></div></div>
+        <div class="shap-pct" style="color:#b794f4">3.7%</div>
+      </div>
+      <div class="shap-item">
+        <div class="shap-rank">06</div>
+        <div class="shap-icon">👨‍👩‍👧</div>
+        <div class="shap-name">Parental Involvement</div>
+        <div class="shap-bar-wrap"><div class="shap-bar" style="width:1.0%; background:linear-gradient(90deg, #f687b3, #c53030);"></div></div>
+        <div class="shap-pct" style="color:#f687b3">&lt;1%</div>
+      </div>
+    </div>
+
+    <div class="reveal" style="margin-top:36px; background:rgba(46,204,113,0.06); border:1px solid rgba(46,204,113,0.2); border-radius:10px; padding:28px 32px;">
+      <div style="font-family:var(--font-mono); font-size:10px; letter-spacing:2px; color:var(--green); margin-bottom:14px;">KEY INSIGHT</div>
+      <p style="font-size:15px; color:var(--text); line-height:1.8; max-width:700px;">
+        School Resources account for <strong style="color:var(--green)">68% of predictive power</strong> — and resources are <em>directly actionable through budget allocation</em>, unlike demographic characteristics. Once resources and engagement are accounted for, <strong style="color:var(--text)">gender, age, and region have negligible independent effect</strong> (SHAP &lt; 0.01).
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ── CLUSTERS ── -->
+<section id="clusters">
+  <div class="container">
+    <div class="section-label">06 — Student Segmentation</div>
+    <h2 class="section-title">Three Performance Tiers</h2>
+    <p class="section-desc">MiniBatchKMeans (k=3, Silhouette=0.174) on 11 standardized dimensions reveals structurally distinct student groups — not ability differences, but resource differences.</p>
+
+    <div class="cluster-grid reveal">
+      <div class="cluster-card low">
+        <div class="cluster-tier">Low</div>
+        <div class="cluster-size">39,380 students · 39.4% of cohort</div>
+        <div class="cluster-stats">
+          <div class="cs-row"><span class="cs-key">Overall Average</span><span class="cs-val">46.8</span></div>
+          <div class="cs-row"><span class="cs-key">National Exam</span><span class="cs-val">286.7</span></div>
+          <div class="cs-row"><span class="cs-key">Homework %</span><span class="cs-val">52.6%</span></div>
+          <div class="cs-row"><span class="cs-key">Textbook Access</span><span class="cs-val">0.36</span></div>
+          <div class="cs-row"><span class="cs-key">Teacher:Student</span><span class="cs-val">50:1 ⚠</span></div>
+          <div class="cs-row"><span class="cs-key">Parental Involvement</span><span class="cs-val">0.30</span></div>
+        </div>
+        <div style="margin-top:16px; font-size:12px; color:#fc8181; font-style:italic;">Systemic deprivation, not individual inadequacy.</div>
+      </div>
+      <div class="cluster-card medium">
+        <div class="cluster-tier">Medium</div>
+        <div class="cluster-size">38,933 students · 38.9% of cohort</div>
+        <div class="cluster-stats">
+          <div class="cs-row"><span class="cs-key">Overall Average</span><span class="cs-val">58.2</span></div>
+          <div class="cs-row"><span class="cs-key">National Exam</span><span class="cs-val">331.9</span></div>
+          <div class="cs-row"><span class="cs-key">Homework %</span><span class="cs-val">73.1% ★</span></div>
+          <div class="cs-row"><span class="cs-key">Textbook Access</span><span class="cs-val">0.38</span></div>
+          <div class="cs-row"><span class="cs-key">Teacher:Student</span><span class="cs-val">50:1</span></div>
+          <div class="cs-row"><span class="cs-key">Parental Involvement</span><span class="cs-val">0.48 ★</span></div>
+        </div>
+        <div style="margin-top:16px; font-size:12px; color:var(--gold); font-style:italic;">Resilient achievers: effort compensates for scarce resources.</div>
+      </div>
+      <div class="cluster-card high">
+        <div class="cluster-tier">High</div>
+        <div class="cluster-size">21,687 students · 21.7% of cohort</div>
+        <div class="cluster-stats">
+          <div class="cs-row"><span class="cs-key">Overall Average</span><span class="cs-val">71.4</span></div>
+          <div class="cs-row"><span class="cs-key">National Exam</span><span class="cs-val">334.5</span></div>
+          <div class="cs-row"><span class="cs-key">Homework %</span><span class="cs-val">62.3%</span></div>
+          <div class="cs-row"><span class="cs-key">Textbook Access</span><span class="cs-val">0.63 ★</span></div>
+          <div class="cs-row"><span class="cs-key">Teacher:Student</span><span class="cs-val">34.5:1 ★</span></div>
+          <div class="cs-row"><span class="cs-key">Parental Involvement</span><span class="cs-val">0.37</span></div>
+        </div>
+        <div style="margin-top:16px; font-size:12px; color:var(--green); font-style:italic;">Structurally advantaged — better resources, smaller classes.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── REGIONS ── -->
+<section id="regions">
+  <div class="container">
+    <div class="section-label">07 — Regional Disparities</div>
+    <h2 class="section-title">Inequality Is Structural,<br>Not Ability-Based</h2>
+    <p class="section-desc">The consistent proportion of Medium-tier students across all regions (38–42%) confirms student potential is nationally distributed. What differs is <em>resource allocation</em>.</p>
+
+    <div class="reveal" style="overflow:hidden; border-radius:10px; border:1px solid var(--border);">
+      <table class="region-table">
+        <thead>
+          <tr>
+            <th>Region</th>
+            <th>Low Performance</th>
+            <th>Medium</th>
+            <th>High Performance</th>
+          </tr>
+        </thead>
+        <tbody id="region-tbody">
+          <tr>
+            <td class="region-name">Somali</td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:#E53E3E; opacity:0.9;"></div> <span style="color:#fc8181">47.4%</span></div></td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:#F4C430; opacity:0.5;"></div> <span style="color:var(--text-muted)">~39%</span></div></td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:var(--green); opacity:0.3;"></div> <span style="color:var(--text-muted)">~14%</span></div></td>
+          </tr>
+          <tr>
+            <td class="region-name">Afar</td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:#E53E3E; opacity:0.75;"></div> <span style="color:#fc8181">~44%</span></div></td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:#F4C430; opacity:0.5;"></div> <span style="color:var(--text-muted)">~39%</span></div></td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:var(--green); opacity:0.3;"></div> <span style="color:var(--text-muted)">~17%</span></div></td>
+          </tr>
+          <tr>
+            <td class="region-name">Benishangul-Gumuz</td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:#E53E3E; opacity:0.65;"></div> <span style="color:#fc8181">~42%</span></div></td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:#F4C430; opacity:0.5;"></div> <span style="color:var(--text-muted)">~40%</span></div></td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:var(--green); opacity:0.35;"></div> <span style="color:var(--text-muted)">~18%</span></div></td>
+          </tr>
+          <tr>
+            <td class="region-name">Tigray</td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:#E53E3E; opacity:0.55;"></div> <span style="color:#fc8181">~40%</span></div></td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:#F4C430; opacity:0.55;"></div> <span style="color:var(--text-muted)">~40%</span></div></td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:var(--green); opacity:0.4;"></div> <span style="color:var(--text-muted)">~20%</span></div></td>
+          </tr>
+          <tr>
+            <td class="region-name">Oromia</td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:#E53E3E; opacity:0.45;"></div> <span style="color:var(--text-muted)">~38%</span></div></td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:#F4C430; opacity:0.6;"></div> <span style="color:var(--text-muted)">~41%</span></div></td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:var(--green); opacity:0.5;"></div> <span style="color:var(--text-muted)">~21%</span></div></td>
+          </tr>
+          <tr>
+            <td class="region-name" style="color:var(--green)">Addis Ababa ★</td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:#E53E3E; opacity:0.25;"></div> <span style="color:var(--green)">21.3%</span></div></td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:#F4C430; opacity:0.65;"></div> <span style="color:var(--text-muted)">~42%</span></div></td>
+            <td><div class="heat-cell"><div class="heat-block" style="background:var(--green); opacity:0.9;"></div> <span style="color:var(--green)">~37%</span></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="reveal" style="margin-top:24px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <div style="background:var(--surface); border:1px solid rgba(229,62,62,0.2); border-radius:8px; padding:24px;">
+        <div style="font-family:var(--font-mono); font-size:28px; font-weight:700; color:#fc8181; margin-bottom:6px;">26.1 pp</div>
+        <div style="font-size:13px; color:var(--text-muted);">Performance gap between <strong style="color:var(--text)">Somali (47.4% low)</strong> and <strong style="color:var(--text)">Addis Ababa (21.3% low)</strong> — students in Somali are more than twice as likely to be in the Low-performance tier.</div>
+      </div>
+      <div style="background:var(--surface); border:1px solid rgba(46,204,113,0.2); border-radius:8px; padding:24px;">
+        <div style="font-family:var(--font-mono); font-size:28px; font-weight:700; color:var(--green); margin-bottom:6px;">+158,000</div>
+        <div style="font-size:13px; color:var(--text-muted);">Additional students per cohort who could move from Low → Medium/High tier if all regions reached Addis Ababa's resource conditions.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── RECOMMENDATIONS ── -->
+<section id="recommendations">
+  <div class="container">
+    <div class="section-label">08 — Recommendations</div>
+    <h2 class="section-title">Evidence-Based<br>Policy Actions</h2>
+    <p class="section-desc">Derived directly from model findings and SHAP analysis — concrete, prioritized, and tied to measurable outcomes.</p>
+
+    <div class="recs-grid reveal">
+      <div class="rec-card">
+        <div class="rec-icon">📦</div>
+        <div class="rec-title">Equitable Resource Distribution</div>
+        <div class="rec-desc">Prioritize learning materials, ICT tools, and infrastructure for underserved regions. School Resources Score drives 68% of performance variance — this is the highest-leverage intervention available.</div>
+        <div class="rec-tags"><span class="rec-tag">High Priority</span><span class="rec-tag">Somali</span><span class="rec-tag">Afar</span></div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-icon">👥</div>
+        <div class="rec-title">Reduce Teacher-Student Ratios</div>
+        <div class="rec-desc">The Low-performance cluster operates at 50:1 ratio — exceeding MoE's 40:1 maximum. High performers benefit from 34.5:1. Teacher deployment and training programs for high-risk areas are critical.</div>
+        <div class="rec-tags"><span class="rec-tag">Infrastructure</span><span class="rec-tag">Rural Focus</span></div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-icon">⚠️</div>
+        <div class="rec-title">Deploy Early Warning System</div>
+        <div class="rec-desc">The at-risk classifier (AUC 0.916, Recall 0.83) can identify vulnerable students early — before national exams — when interventions are most effective. System-wide deployment is feasible.</div>
+        <div class="rec-tags"><span class="rec-tag">ML Deployment</span><span class="rec-tag">Prevention</span></div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-icon">📚</div>
+        <div class="rec-title">Strengthen Engagement Programs</div>
+        <div class="rec-desc">Engagement is cost-effective in resource-constrained settings (17.8% SHAP). Attendance monitoring, structured homework programs, and tutoring initiatives show measurable return on investment.</div>
+        <div class="rec-tags"><span class="rec-tag">Cost-Effective</span><span class="rec-tag">All Regions</span></div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-icon">🌍</div>
+        <div class="rec-title">Region-Specific Interventions</div>
+        <div class="rec-desc">Inequality is structural, not ability-based. Apply targeted policy to Somali, Afar, and Benishangul-Gumuz. Monitor conflict-affected regions (Amhara, Tigray, Oromia) with dedicated analytics.</div>
+        <div class="rec-tags"><span class="rec-tag">Policy</span><span class="rec-tag">Equity</span></div>
+      </div>
+      <div class="rec-card">
+        <div class="rec-icon">👨‍👩‍👧</div>
+        <div class="rec-title">Promote Parental Involvement</div>
+        <div class="rec-desc">Medium-cluster resilience is partly explained by the highest parental involvement (0.48 vs 0.30 in Low). Structured family engagement programs can partially compensate for resource gaps.</div>
+        <div class="rec-tags"><span class="rec-tag">Community</span><span class="rec-tag">SDG 4</span></div>
+      </div>
+    </div>
+
+    <!-- Limitations -->
+    <div style="margin-top:56px;" class="reveal">
+      <div class="section-label" style="margin-bottom:20px;">Known Limitations</div>
+      <div class="lim-list">
+        <div class="lim-item">
+          <div class="lim-icon">🔒</div>
+          <div class="lim-text"><strong>Cross-sectional design</strong> — Single academic year snapshot; cannot track individual longitudinal progress or establish causal relationships.</div>
+        </div>
+        <div class="lim-item">
+          <div class="lim-icon">📉</div>
+          <div class="lim-text"><strong>Missing variables</strong> — Household income, school travel distance, teacher qualifications, psychological factors, and study time were unavailable.</div>
+        </div>
+        <div class="lim-item">
+          <div class="lim-icon">🔬</div>
+          <div class="lim-text"><strong>Kaggle data source</strong> — Results must be validated against official ESS administrative data before policy deployment.</div>
+        </div>
+        <div class="lim-item">
+          <div class="lim-icon">📊</div>
+          <div class="lim-text"><strong>Moderate cluster separation</strong> — Silhouette Score of 0.174 reflects overlapping student performance patterns. Clusters are heuristic, not deterministic.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TECH STACK ── -->
+<section>
+  <div class="container">
+    <div class="section-label">09 — Tech Stack</div>
+    <h2 class="section-title">Tools &amp; Libraries</h2>
+    <div class="tech-grid reveal">
+      <span class="tech-pill">Python 3.10+</span>
+      <span class="tech-pill">scikit-learn</span>
+      <span class="tech-pill">XGBoost</span>
+      <span class="tech-pill">Gradient Boosting</span>
+      <span class="tech-pill">SHAP</span>
+      <span class="tech-pill">pandas</span>
+      <span class="tech-pill">numpy</span>
+      <span class="tech-pill">MiniBatchKMeans</span>
+      <span class="tech-pill">SMOTE</span>
+      <span class="tech-pill">PCA</span>
+      <span class="tech-pill">Yeo-Johnson Transform</span>
+      <span class="tech-pill">StandardScaler</span>
+      <span class="tech-pill">matplotlib</span>
+      <span class="tech-pill">seaborn</span>
+      <span class="tech-pill">Jupyter Notebook</span>
+      <span class="tech-pill">CRISP-DM</span>
+    </div>
+
+    <div style="margin-top:48px;" class="reveal">
+      <div class="section-label" style="margin-bottom:20px;">Repository Structure</div>
+      <div class="repo-tree">
+        <span class="folder">📁 ethiopian-student-analytics/</span><br>
+        &nbsp;&nbsp;<span class="folder">├── 📁 data/</span><span class="comment">            # Raw &amp; processed datasets</span><br>
+        &nbsp;&nbsp;<span class="folder">├── 📁 notebooks/</span><span class="comment">       # EDA &amp; experimental notebooks</span><br>
+        &nbsp;&nbsp;<span class="folder">├── 📁 src/</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">├── 📁 preprocessing/</span><span class="comment">  # Feature engineering pipeline</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">├── 📁 models/</span><span class="comment">        # Regression, classification, clustering</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">└── 📁 explainability/</span><span class="comment"> # SHAP analysis scripts</span><br>
+        &nbsp;&nbsp;<span class="folder">├── 📁 dashboard/</span><span class="comment">       # Interactive Plotly/Dash prototype</span><br>
+        &nbsp;&nbsp;<span class="folder">├── 📁 Assets/</span><span class="comment">          # Dashboard screenshots (dash1–5.png)</span><br>
+        &nbsp;&nbsp;<span class="main">├── README.html</span><span class="comment">         # This document</span><br>
+        &nbsp;&nbsp;<span class="file">├── requirements.txt</span><br>
+        &nbsp;&nbsp;<span class="file">└── report.pdf</span><span class="comment">          # Full internship report</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── AUTHOR ── -->
+<section id="author">
+  <div class="container">
+    <div class="section-label">10 — Author</div>
+    <h2 class="section-title">About This Research</h2>
+    <div class="author-card reveal">
+      <div>
+        <div class="author-name">Birhanu Moges</div>
+        <div class="author-role">Data Science Intern · Debre Birhan University</div>
+        <div class="author-detail">
+          Student ID&nbsp;&nbsp;&nbsp;&nbsp;<span>DBU1501727</span><br>
+          Department&nbsp;&nbsp;&nbsp;<span>Data Science</span><br>
+          Institution&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span>Debre Birhan University</span><br>
+          Host Organization&nbsp;<span>Ethiopian Statistics Service (ESS)</span><br>
+          Location&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span>BahirDar, Ethiopia</span><br>
+          Submitted&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span>April 20, 2026</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:var(--font-mono); font-size:10px; letter-spacing:2px; color:var(--text-muted); margin-bottom:16px; text-transform:uppercase;">Supervision</div>
+        <div style="background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:20px; margin-bottom:12px;">
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">University Supervisor</div>
+          <div style="font-weight:600; color:#fff;">Petros Abebe, MSc</div>
+          <div style="font-size:12px; color:var(--text-muted);">Debre Birhan University</div>
+        </div>
+        <div style="background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:20px;">
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Company Supervisor</div>
+          <div style="font-weight:600; color:#fff;">Mebratu Mulu</div>
+          <div style="font-size:12px; color:var(--text-muted);">Ethiopian Statistics Service (ESS)</div>
+        </div>
+        <div style="margin-top:20px; font-size:12px; color:var(--text-muted); line-height:1.7;">
+          Contributing to <strong style="color:var(--text)">SDG 4 — Quality Education</strong> through evidence-based analytics and reusable Python frameworks for ESS's analytical capabilities.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="container">
+    <span class="footer-logo">ESPA</span>
+    <div>Ethiopian Student Performance Analytics System · Internship Report 2026</div>
+    <div style="margin-top:8px;">Debre Birhan University · Department of Data Science · Ethiopian Statistics Service</div>
+  </div>
+</footer>
+
+<script>
+  // ── NAV active state
+  function scrollTo(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-link');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.nav-link[onclick="scrollTo('${e.target.id}')"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(s => observer.observe(s));
+
+  // ── Reveal on scroll
+  const reveals = document.querySelectorAll('.reveal');
+  const revealObs = new IntersectionObserver(entries => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 60);
+        // Animate bars inside
+        e.target.querySelectorAll('.metric-bar, .shap-bar').forEach((bar, j) => {
+          setTimeout(() => bar.classList.add('animated'), j * 100 + 200);
+        });
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(r => revealObs.observe(r));
+
+  // ── Tab switcher
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    const content = document.getElementById('tab-' + name);
+    content.classList.add('active');
+    // Re-animate bars
+    setTimeout(() => {
+      content.querySelectorAll('.metric-bar').forEach(b => {
+        b.classList.remove('animated');
+        void b.offsetWidth; // reflow
+        b.classList.add('animated');
+      });
+    }, 50);
+  }
+
+  // ── Initial bar animation for visible elements
+  window.addEventListener('load', () => {
+    document.querySelectorAll('.reveal').forEach(r => {
+      const rect = r.getBoundingClientRect();
+      if (rect.top < window.innerHeight) {
+        r.classList.add('visible');
+        r.querySelectorAll('.metric-bar, .shap-bar').forEach((bar, j) => {
+          setTimeout(() => bar.classList.add('animated'), j * 100 + 300);
+        });
+      }
+    });
+  });
+</script>
+</body>
+</html>
