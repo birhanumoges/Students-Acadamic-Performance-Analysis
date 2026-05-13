@@ -1,0 +1,46 @@
+name: Build Dashboard SVG
+
+# ─── Triggers ────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "Assets/dash*.png"      # rebuild only when screenshots change
+      - "scripts/build_svg.py"  # or when the build script changes
+  workflow_dispatch:            # allow manual trigger from GitHub UI
+
+# ─── Job ─────────────────────────────────────────────────────────────────────
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write           # needed to push dashboard.svg back to the repo
+
+    steps:
+      # 1. Check out the full repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 3. Install Pillow (only dependency)
+      - name: Install dependencies
+        run: pip install Pillow
+
+      # 4. Run the build script → writes dashboard.svg to repo root
+      - name: Generate dashboard.svg
+        run: python scripts/build_svg.py
+
+      # 5. Commit & push dashboard.svg back to the repo
+      - name: Commit dashboard.svg
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dashboard.svg
+          # only commit if dashboard.svg actually changed
+          git diff --cached --quiet || git commit -m "ci: regenerate dashboard.svg [skip ci]"
+          git push
