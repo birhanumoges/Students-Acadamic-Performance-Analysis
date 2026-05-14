@@ -174,6 +174,8 @@ Per subject per grade: test scores, attendance records, homework completion, cla
 
 </details>
 
+Dataset source: https://www.kaggle.com/datasets/yeneinehseiba/ethiopian-students-data
+
 ---
 
 # EduFeature: Hierarchical Data Compression & Engineering
